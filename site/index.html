@@ -379,9 +379,12 @@
   },
 
   "edit": {
-    "fcpxml_path": "artifacts/edit/final.fcpxml",
-    "fcpxml_version": "1.10",
+    "renderer": "hyperframes",
+    "renderer_version": "0.4.12",
+    "composition_path": "artifacts/edit/index.html",
+    "composition_archive_path": "artifacts/edit/composition.zip",
     "render_path": "artifacts/edit/final.mp4",
+    "render_md5": "a0d5625a16271e0274563466ab36ee4e",
     "total_duration_s": 60.0,
     "status": "approved"
   },
@@ -1073,9 +1076,17 @@ function Hero({ brief, edit, project }) {
           <dt>released</dt><dd>22 April 2026</dd>
           <dt>director</dt><dd>rectoverso (pipeline)</dd>
           <dt>project</dt><dd>{project}</dd>
+          {edit.renderer_version && (<><dt>renderer</dt><dd>hyperframes {edit.renderer_version}</dd></>)}
         </dl>
-        <a href="#" className="hero__dl-download">
-          <Icon name="download" /> Download FCPXML
+        {edit.render_md5 && (
+          <div className="hero__signature">
+            <span className="hero__signature-label">render signature</span>
+            <code className="hero__signature-md5">md5 {edit.render_md5}</code>
+            <span className="hero__signature-note">bit-identical on every render</span>
+          </div>
+        )}
+        <a href={`./${edit.composition_archive_path || "media/composition.zip"}`} className="hero__dl-download" download>
+          <Icon name="download" /> Download composition
         </a>
       </aside>
     </section>
@@ -1143,8 +1154,9 @@ function ShotStrip({ shots, activeId, onSelect }) {
       <p className="section__eyebrow">§ 03 — the shot strip</p>
       <h2 className="section__title">Evidence.</h2>
       <p style={{maxWidth:"54ch", color:"var(--fg-2)", marginBottom:"var(--sp-5)"}}>
-        Click a frame to expand the prompt the Prompt Smith authored, the provider the Router chose,
-        every attempt, judge notes, and cost. Colour lives here, inside the frames.
+        Click a frame to play the shot inline and open the drawer — the prompt the Prompt Smith authored,
+        the provider the Router chose, every attempt, judge notes, cost, and the audio parts that sit
+        under this frame. Colour lives here, inside the frames.
       </p>
       <div className="strip" role="listbox">
         {shots.map(s => (
@@ -1152,10 +1164,21 @@ function ShotStrip({ shots, activeId, onSelect }) {
             key={s.shot_id}
             role="option"
             aria-selected={s.shot_id === activeId}
+            aria-label={`Shot ${s.shot_id}${s.shot_id === activeId ? " (playing)" : ""}`}
             className={`strip__card${s.shot_id === activeId ? " strip__card--active" : ""}`}
             onClick={() => onSelect(s.shot_id)}>
             <div className="strip__thumb">
-              <img src={`./media/shots/${s.shot_id}.svg`} alt="" />
+              {s.shot_id === activeId ? (
+                <video
+                  className="strip__video"
+                  src={`./media/shots/${s.shot_id}.mp4`}
+                  poster={`./media/shots/${s.shot_id}.svg`}
+                  autoPlay muted loop playsInline preload="metadata"
+                />
+              ) : (
+                <img src={`./media/shots/${s.shot_id}.svg`} alt="" />
+              )}
+              {s.shot_id === activeId && <span className="strip__playing">playing</span>}
             </div>
             <div className="strip__meta">
               <span>{s.shot_id}</span>
@@ -1169,10 +1192,12 @@ function ShotStrip({ shots, activeId, onSelect }) {
   );
 }
 
-function ShotDrawer({ shot }) {
+function ShotDrawer({ shot, audio }) {
   if (!shot) return null;
   const chosen = shot.routing;
   const final = shot.final;
+  const dialogue = (audio && audio.dialogue || []).filter(d => d.shot_id === shot.shot_id);
+  const sfx = (audio && audio.sfx || []).filter(s => s.shot_id === shot.shot_id);
   return (
     <div className="section" style={{paddingTop:0}}>
       <div className="drawer" key={shot.shot_id}>
@@ -1224,6 +1249,33 @@ function ShotDrawer({ shot }) {
                 {shot.status} — editor will crop wider in post
               </dd>
             </dl>
+          )}
+
+          {(dialogue.length > 0 || sfx.length > 0) && (
+            <div className="drawer__parts">
+              <p className="drawer__eyebrow" style={{marginTop:"var(--sp-4)"}}>audio parts · {dialogue.length + sfx.length}</p>
+              {dialogue.map(d => (
+                <figure key={d.line_id} className="part part--dialogue">
+                  <figcaption className="part__caption">
+                    <span className="part__kind">dialogue</span>
+                    <span className="part__id">{d.line_id}</span>
+                    <span className="part__timing">{d.timing.in_s.toFixed(1)}s → {d.timing.out_s.toFixed(1)}s</span>
+                  </figcaption>
+                  <blockquote className="part__text">"{d.text}"</blockquote>
+                  <audio className="part__audio" controls preload="metadata" src={`./${d.audio_path}`} />
+                </figure>
+              ))}
+              {sfx.map(s => (
+                <figure key={s.sfx_id} className="part part--sfx">
+                  <figcaption className="part__caption">
+                    <span className="part__kind">sfx</span>
+                    <span className="part__id">{s.sfx_id}</span>
+                  </figcaption>
+                  <p className="part__text">{s.description}</p>
+                  <audio className="part__audio" controls preload="metadata" src={`./${s.audio_path}`} />
+                </figure>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -1369,11 +1421,13 @@ function Colophon() {
           Anthropic&apos;s Claude Opus 4.7. A Producer agent coordinated specialists — a Screenwriter,
           a Prompt Smith, a Router, a Renderer, a Shot Judge, an Audio Agent, an Editor Agent, and a
           Creative Director — through a shared shot manifest. No human touched the frames; a human
-          wrote the brief and opened the FCPXML.
+          wrote the brief and downloaded the composition.
         </p>
         <p style={{color:"var(--fg-2)"}}>
-          Renders by Kling 2.1 Pro (human shots), Alibaba Wan 2.7 Plus (workhorse), Google Veo 3.1 Fast
-          (one hero moment). Voice and SFX by ElevenLabs. Edit list exported as FCPXML 1.10.
+          Shot renders by Kling 2.1 Pro (human shots), Alibaba Wan 2.7 Plus (workhorse), Google Veo 3.1 Fast
+          (one hero moment). Voice and SFX by ElevenLabs. Final edit assembled as a Hyperframes HTML
+          composition, rendered deterministically to MP4 via headless Chrome — the same composition
+          + assets produce the same bytes on every run.
         </p>
       </div>
       <div className="colophon__credits">
@@ -1389,6 +1443,50 @@ function App({ manifest, events }) {
   const [activeId, setActiveId] = useState(null);
   const activeShot = activeId ? manifest.shots.find(s => s.shot_id === activeId) : null;
 
+  // Audio crossfade: when one .part__audio starts playing, fade out and pause
+  // every other one. 250ms linear volume ramp on the outgoing players. Newly
+  // started audio also fades in from silence over the same window so the
+  // transition is symmetric.
+  useEffect(() => {
+    const DURATION_MS = 250;
+    const STEP_MS = 20;
+
+    function rampVolume(el, from, to, onDone) {
+      const steps = Math.max(1, Math.round(DURATION_MS / STEP_MS));
+      let i = 0;
+      el.volume = from;
+      const id = setInterval(() => {
+        i += 1;
+        el.volume = Math.max(0, Math.min(1, from + (to - from) * (i / steps)));
+        if (i >= steps) {
+          clearInterval(id);
+          el.volume = to;
+          if (onDone) onDone();
+        }
+      }, STEP_MS);
+      return id;
+    }
+
+    function handlePlay(ev) {
+      const playing = ev.target;
+      if (!(playing instanceof HTMLAudioElement)) return;
+      if (!playing.classList.contains("part__audio")) return;
+      document.querySelectorAll("audio.part__audio").forEach(other => {
+        if (other === playing) return;
+        if (other.paused) return;
+        rampVolume(other, other.volume, 0, () => {
+          other.pause();
+          other.volume = 1; // reset for next play
+        });
+      });
+      // Fade the new player in from 0 -> 1.
+      rampVolume(playing, 0, 1);
+    }
+
+    document.addEventListener("play", handlePlay, true);
+    return () => document.removeEventListener("play", handlePlay, true);
+  }, []);
+
   return (
     <div className="page">
       <Masthead />
@@ -1396,7 +1494,7 @@ function App({ manifest, events }) {
       <Brief brief={manifest.brief} />
       <Script shots={manifest.shots} />
       <ShotStrip shots={manifest.shots} activeId={activeId} onSelect={id => setActiveId(id === activeId ? null : id)} />
-      {activeShot && <ShotDrawer shot={activeShot} />}
+      {activeShot && <ShotDrawer shot={activeShot} audio={manifest.audio} />}
       <AgentTrace events={events} shots={manifest.shots} />
       <Ledger events={events} budget={manifest.budget} />
       <Colophon />

@@ -429,21 +429,30 @@
       "required": ["status", "renderer"],
       "properties": {
         "renderer": {
-          "enum": ["hyperframes", "fcpxml"],
-          "description": "Output renderer. 'hyperframes' is the default (HTML composition -> MP4 via headless Chrome + FFmpeg). 'fcpxml' is the fallback path documented in prompts/editor_agent.md when the Hyperframes render loop exhausts retries."
+          "const": "hyperframes",
+          "description": "Output renderer. Hyperframes renders an HTML composition to MP4 via headless Chrome + FFmpeg with bit-identical output across runs."
         },
         "renderer_version": {
           "type": "string",
           "minLength": 1,
-          "description": "Version of the chosen renderer (e.g., Hyperframes package version '0.4.12', or FCPXML format '1.13'). Populated once the first render attempt completes."
+          "description": "Hyperframes package version at the time of render (e.g., '0.4.12'). Populated once the first render attempt completes."
         },
         "composition_path": {
           "$ref": "#/$defs/relativePath",
-          "description": "Source of truth for the edit. For renderer='hyperframes', this is the HTML composition file (index.html); for renderer='fcpxml', the FCPXML file."
+          "description": "Relative path to the HTML composition (index.html) that was rendered."
+        },
+        "composition_archive_path": {
+          "$ref": "#/$defs/relativePath",
+          "description": "Relative path to the zipped composition bundle (composition.zip = index.html + assets/). The downloadable artifact any recipient can re-render locally with `npx hyperframes render`. Optional until the editor assembles it."
         },
         "render_path": {
           "$ref": "#/$defs/relativePath",
           "description": "Assembled MP4 produced by the renderer."
+        },
+        "render_md5": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{32}$",
+          "description": "md5 hex digest of the assembled MP4. Carries the determinism guarantee — same composition + assets must produce the same digest. Optional until render succeeds."
         },
         "total_duration_s": { "type": "number", "minimum": 0 },
         "status": { "enum": ["pending", "rendering", "approved", "failed"] }

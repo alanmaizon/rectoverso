@@ -23,8 +23,7 @@ Architecture:
     - Returns a plain dict matching the Tool Protocol. Producer projects it
       into `shots[i].edit.*` fields.
     - Errors at any step surface as non-PASS outcomes with stdout/stderr tails
-      in the payload; the caller decides whether to retry, escalate, or fall
-      back to FCPXML.
+      in the payload; the caller decides whether to retry or escalate.
 
 Edge cases:
     - Node/ffmpeg not on PATH -> LintFailure / RenderFailure with a clear message.
@@ -32,6 +31,10 @@ Edge cases:
       refuses to render.
     - Render produces an empty file -> treated as failure (size sanity check).
     - Render timeout -> subprocess.TimeoutExpired surfaces as failure.
+
+Hyperframes is the sole renderer — there is no fallback format. If the render
+loop exhausts, the caller (Editor Agent) escalates to the Producer rather than
+silently shipping an alternate artifact.
 """
 
 from __future__ import annotations

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`rectoverso` is a multi-agent AI filmmaking pipeline built for the "Built with Opus 4.7" hackathon (Apr 21–26, 2026). Input: a creative brief. Output: an assembled short film (shots + voiceover/SFX + Hyperframes HTML composition rendered to MP4; FCPXML remains as a documented fallback), produced autonomously by a Producer orchestrator coordinating specialist agents through a shared shot manifest.
+`rectoverso` is a multi-agent AI filmmaking pipeline built for the "Built with Opus 4.7" hackathon (Apr 21–26, 2026). Input: a creative brief. Output: an assembled short film (shots + voiceover/SFX + Hyperframes HTML composition rendered deterministically to MP4), produced autonomously by a Producer orchestrator coordinating specialist agents through a shared shot manifest.
 
 The repository is a new-original-work submission — no code ported from prior projects. Planning context and architectural decisions live in [init.txt](init.txt) (conversation transcript that produced this design).
 
@@ -110,7 +110,7 @@ Why Hyperframes:
 - **Runtime fit**: Node 22+ and npm are pre-installed in the Managed Agents sandbox; declare `packages.apt: ["ffmpeg"]` in the environment config and Chrome auto-downloads at first render (~107 MB, one-time).
 - **Claude skill ecosystem**: `hyperframes`, `hyperframes-cli`, `gsap` skills (installable via `npx skills add heygen-com/hyperframes`) encode framework-specific patterns. The Editor Agent invokes them before authoring compositions.
 
-FCPXML remains in the schema (`edit.renderer = "fcpxml"`) as the documented fallback when Hyperframes retries exhaust — not a second-class path, a resilience feature. The schema is renderer-agnostic (`edit.renderer`, `edit.composition_path`, `edit.renderer_version`, `edit.render_path`); switching paths is a single field change.
+The schema pins `edit.renderer` to the constant `"hyperframes"`. Other editable-output fields (`edit.composition_path` for the HTML, `edit.composition_archive_path` for the downloadable zip, `edit.render_path` for the MP4, `edit.render_md5` for the determinism signature) cluster around it. If the renderer-choice space ever needs to widen again, that's a schema change and a test-suite change — not a flag flip.
 
 The Python-side tool adapter is `src.producer.HyperframesTool` (`src/producer/hyperframes.py`) — a subprocess wrapper that runs `npx hyperframes lint --json` then `npx hyperframes render`, captures exit code + stdout/stderr tails + output MD5, and returns a dict that maps cleanly into a `dispatch_result` EventLog payload.
 
@@ -136,7 +136,7 @@ Prompt caching is load-bearing for staying under the Anthropic budget. Managed A
 - Not building a general-purpose video platform. One 30–60s film, 8–15 shots, one genre slice.
 - Not integrating every video provider. Two models on primary path is enough.
 - Not building a web UI. CLI + manifest inspection is the interface.
-- Not implementing a manual FCP-style compositing GUI. The Editor Agent assembles an HTML composition (Hyperframes) rendered deterministically to MP4. FCPXML is the documented fallback when the Hyperframes retry loop exhausts — see [prompts/editor_agent.md § Fallback](prompts/editor_agent.md).
+- Not implementing a manual compositing GUI. The Editor Agent assembles an HTML composition (Hyperframes) rendered deterministically to MP4 — single renderer, no alternate formats. If the render loop exhausts, it escalates; it does not silently ship a different artifact.
 - Not writing tests for every branch — router decisions, manifest validation, and state transitions need tests. Provider adapters can rely on fixture replay.
 
 ## Deadlines

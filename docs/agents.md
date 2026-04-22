@@ -20,9 +20,9 @@ Coordination: no agent-to-agent direct calls. All handoffs through `state/manife
 | Tier | Managed Agent |
 | Session lifetime | Full project run (hours) |
 | Tools | `bash`, file ops, `invoke_shot_judge`, `invoke_audio_agent`, `invoke_editor_agent` (custom) |
-| Skills | `shot-manifest-schema`, `fcpxml-conventions` |
+| Skills | `shot-manifest-schema`, `hyperframes`, `hyperframes-cli` |
 | Environment | Container with ffmpeg, ffprobe, python 3.12 |
-| Outcomes | Manifest contains N approved shots; each has `final.render_path`, matching audio, and an approved edit; FCPXML validates. |
+| Outcomes | Manifest contains N approved shots; each has `final.render_path`, matching audio, and an approved edit; `npx hyperframes render` produces a non-zero MP4 whose md5 matches `edit.render_md5`. |
 | System prompt | [prompts/producer.md](../prompts/producer.md) |
 
 **Responsibilities**:
@@ -112,22 +112,20 @@ Coordination: no agent-to-agent direct calls. All handoffs through `state/manife
 | Outcomes | `npx hyperframes lint --json` reports `{"ok": true, "errorCount": 0}` AND `npx hyperframes render --output out.mp4` produces a non-zero-byte MP4 |
 | System prompt | [prompts/editor_agent.md](../prompts/editor_agent.md) |
 
-**Output spec (default renderer: `hyperframes`)**:
+**Output spec**:
 - HTML composition (`artifacts/edit/index.html`) with deterministic track layout: picture spine on track 0, dialogue on 1, music on 2 (−8dB ducked under dialogue via GSAP), SFX on 3.
 - `class="clip"` on every visible timed element (framework requirement).
 - Only deterministic logic — no `Date.now()`, no `Math.random()`, no network fetches.
 - Transitions: hard cut by default; GSAP dissolves only where brief calls for them.
 - Timecode: 30fps default (Hyperframes). 24fps via `data-fps` on the root if brief demands cinematic feel.
+- Downloadable bundle: after the render succeeds, the Editor produces `artifacts/edit/composition.zip` (`index.html` + `assets/`) as the ship-able, re-renderable archive and writes its path to `edit.composition_archive_path`. The MP4 is the film; the zip is the editable source any recipient can re-render locally with `npx hyperframes render` bit-identical to the original.
 
 **Self-verification loop**:
 1. Author/edit `index.html` (invoke `hyperframes` + `gsap` skills before writing — they encode framework patterns not in generic web docs).
 2. `npx hyperframes lint --json` → parse `findings[]`; fix all errors; repeat until `errorCount == 0`.
-3. `npx hyperframes render --output out.mp4` → verify exit code 0 AND non-zero output size.
-4. If render fails: inspect stderr, revise, regenerate. **Max 3 render iterations**.
-5. If still failing: fall back to FCPXML (below).
-
-**Fallback path** (only when Hyperframes retries exhaust):
-Set `edit.renderer = "fcpxml"`, emit FCPXML 1.13 + `ffmpeg concat` MP4. Schema keeps both renderers valid; `composition_path` points at either `index.html` or the `.fcpxml` file. Document the fallback in `history`. Shipping an MP4 always beats shipping nothing.
+3. `npx hyperframes render --output out.mp4` → verify exit code 0 AND non-zero output size; `md5sum out.mp4` and write the digest to `edit.render_md5`.
+4. Build `composition.zip` and write `edit.composition_archive_path`.
+5. If render fails: inspect stderr, revise, regenerate. **Max 3 render iterations** before escalating to the Producer. There is no silent alternate-format fallback — Hyperframes is the only renderer.
 
 ---
 

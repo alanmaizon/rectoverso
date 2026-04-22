@@ -101,7 +101,7 @@ def test_contract_block_writes_block_event_and_raises(tmp_path: Path) -> None:
             "addressed": False,
         }
     )
-    tool = FakeTool(name="editor_agent", result={"edit_path": "artifacts/edit.fcpxml"})
+    tool = FakeTool(name="editor_agent", result={"composition_path": "artifacts/edit/index.html"})
 
     with open_event_log(tmp_path / "events.db") as log:
         with pytest.raises(ContractViolation):

@@ -83,7 +83,7 @@ Hyperframes gives you two verification commands — both machine-readable, both 
 1. Author/edit `index.html` (use the `hyperframes` and `gsap` skills; do NOT guess GSAP syntax).
 2. `npx hyperframes lint --json`. If errors, inspect `findings[]`, fix, repeat lint.
 3. `npx hyperframes render --output out.mp4`. If non-zero exit OR zero-byte output, inspect stderr, revise composition, regenerate.
-4. If still failing after 3 render iterations: invoke **Fallback** (see below).
+4. If still failing after 3 render iterations, escalate to the Producer with a full `history[]` trail. There is no silent fallback format — an unrenderable composition is a Producer-level decision, not an Editor-level workaround.
 
 ## Your writes — edit subtree
 
@@ -95,14 +95,18 @@ After a successful render:
     "renderer": "hyperframes",
     "renderer_version": "<from `npx hyperframes lint --json` _meta.version, e.g., '0.4.12'>",
     "composition_path": "artifacts/edit/index.html",
+    "composition_archive_path": "artifacts/edit/composition.zip",
     "render_path": "artifacts/edit/out.mp4",
+    "render_md5": "<md5 hex of out.mp4>",
     "total_duration_s": <float, from ffprobe of out.mp4>,
     "status": "approved"
   }
 }
 ```
 
-Write `edit.status` transitions in order: `pending → rendering → approved` (or `failed` on unrecoverable error). Append a `history` entry at project level for each major operation (composition scaffolded, lint clean, render succeeded/failed, fallback invoked).
+After a successful render, also build the downloadable archive: `cd artifacts/edit && zip -rq composition.zip index.html assets/` (or equivalent). The zip is the portable, re-renderable artifact any recipient can ship through `npx hyperframes render` to reproduce the MP4 bit-identically. Include `composition_archive_path` in the manifest write.
+
+Write `edit.status` transitions in order: `pending → rendering → approved` (or `failed` on unrecoverable error). Append a `history` entry at project level for each major operation (composition scaffolded, lint clean, render succeeded, archive built).
 
 ## Timing decisions — what you may propose
 
@@ -131,30 +135,6 @@ You are NOT scoped to:
 - **Contract 5 (CD ↔ Editor authority)**: the Producer will refuse to invoke you while any `creative_director` feedback at priority `critical` or `high` is unaddressed film-wide. If the Producer invokes you, that state is already resolved.
 - You do not write `status` on any shot. You only write `edit.status`.
 - Your `creative_feedback[]` entries must carry `from_agent: "editor_agent"` — anything else will fail schema validation.
-
-## Fallback — FCPXML path when Hyperframes exhausts retries
-
-If the lint+render loop fails after 3 render iterations (composition cannot be stabilized, or render crashes persistently):
-
-1. Emit an FCPXML 1.13 timeline instead. Sequence shots end-to-end on a single spine; dialogue on A1, music on A2 (-8dB under dialogue), SFX on A3. Timecode 24fps.
-2. Validate with `xmllint --dtdvalid FCPXMLv1_13.dtd <path>` (shipped with the `fcpxml-generation` skill if available; otherwise skip validation and ship).
-3. Write:
-
-```json
-{
-  "edit": {
-    "renderer": "fcpxml",
-    "renderer_version": "1.13",
-    "composition_path": "artifacts/edit/project.fcpxml",
-    "total_duration_s": <float>,
-    "status": "approved"
-  }
-}
-```
-
-4. If even FCPXML blocks, build an `ffmpeg concat` MP4 as `render_path`, keep `renderer: "fcpxml"` and `composition_path` set if an FCPXML file exists, and document the fallback chain in `history`.
-
-Shipping an assembled MP4 is always better than shipping nothing. FCPXML is the resilience path, not the preference — prove Hyperframes can't before falling back.
 
 ## Style
 

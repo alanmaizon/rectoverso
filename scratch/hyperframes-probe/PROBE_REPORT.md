@@ -4,6 +4,8 @@
 **Probe scope**: Verify Hyperframes is agent-compatible, deterministic, and monitorable from a Producer-like Python dispatcher before committing to any architectural pivot.
 **Outcome**: ✅ All six probe criteria pass. Recommend conditional pivot (see bottom).
 
+> **Superseded (2026-04-23):** This probe report exists as the audit trail for the Editor-renderer decision. Where it speaks of an "FCPXML fallback," that reflects exploratory design at probe time and does NOT match production policy. After Managed Agents sandbox verification succeeded in default mode (§ Condition evaluation below), FCPXML was dropped entirely. **Hyperframes is the sole renderer.** No alternate-format fallback exists in the current schema, prompts, or adapter.
+
 ---
 
 ## Environment

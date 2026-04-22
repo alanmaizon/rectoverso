@@ -166,14 +166,25 @@ Render as a section only if dialogue or sfx is non-empty. VO lines can be shown 
 
 ```jsonc
 {
-  "final_mp4_path": "artifacts/edit/final.mp4",
-  "fcpxml_path": "artifacts/edit/final.fcpxml",
-  "duration_s": 60.0,
-  "assembled_at": "2026-04-26T15:20:00Z"
+  "renderer": "hyperframes",                              // always the constant "hyperframes"
+  "renderer_version": "0.4.12",                           // npm package version at render time
+  "composition_path": "artifacts/edit/index.html",        // the HTML composition
+  "composition_archive_path": "artifacts/edit/composition.zip",  // zip bundle ship-able to any recipient
+  "render_path": "artifacts/edit/final.mp4",              // the assembled film
+  "render_md5": "a0d5625a16271e0274563466ab36ee4e",       // md5 hex of render_path; the determinism signature
+  "total_duration_s": 60.0,
+  "status": "approved"                                    // pending | rendering | approved | failed
 }
 ```
 
-These are the paths to the **Hero** video and the **Download FCPXML** button.
+These drive:
+- **Hero** video player — `render_path`.
+- **Render signature** line under the hero — `render_md5` + "bit-identical on every render".
+- **Download composition** button — `composition_archive_path` (`.zip` of `index.html` + assets; re-renderable locally via `npx hyperframes render`).
+
+`renderer` is fixed to `"hyperframes"`. The site does not branch on it.
+
+See `schemas/manifest.schema.json` (authoritative) and `docs/manifest-schema.md` for the full spec.
 
 ### `budget`
 

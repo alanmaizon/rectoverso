@@ -97,18 +97,20 @@ Status: `draft | approved`.
   "renderer": "hyperframes",
   "renderer_version": "0.4.12",
   "composition_path": "artifacts/edit/index.html",
+  "composition_archive_path": "artifacts/edit/composition.zip",
   "render_path": "artifacts/edit/final.mp4",
+  "render_md5": "a0d5625a16271e0274563466ab36ee4e",
   "total_duration_s": 58.4,
   "status": "approved"
 }
 ```
 
-`renderer` selects the output toolchain. Default is `"hyperframes"` — an HTML
-composition (`composition_path`) rendered to MP4 via headless Chrome + FFmpeg.
-Fallback is `"fcpxml"` when the Hyperframes self-verification loop exhausts
-retries (see `prompts/editor_agent.md § Fallback`); the `composition_path` in
-that case points at an FCPXML file and `renderer_version` holds the FCPXML
-format version (e.g., `"1.13"`).
+`renderer` is always `"hyperframes"`. The Editor Agent writes the HTML composition
+to `composition_path`, renders it to `render_path` via `npx hyperframes render`,
+records the MP4's md5 hex under `render_md5` (the determinism signature), and
+builds a portable zip bundle at `composition_archive_path` so any recipient can
+re-render locally. If the render loop exhausts, the Editor escalates to the
+Producer — there is no alternate renderer.
 
 Status: `pending | rendering | approved | failed`.
 

@@ -367,9 +367,12 @@
   },
 
   "edit": {
-    "fcpxml_path": "artifacts/edit/final.fcpxml",
-    "fcpxml_version": "1.10",
+    "renderer": "hyperframes",
+    "renderer_version": "0.4.12",
+    "composition_path": "artifacts/edit/index.html",
+    "composition_archive_path": "artifacts/edit/composition.zip",
     "render_path": "artifacts/edit/final.mp4",
+    "render_md5": "a0d5625a16271e0274563466ab36ee4e",
     "total_duration_s": 60.0,
     "status": "approved"
   },

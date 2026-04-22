@@ -65,7 +65,8 @@ flowchart TB
     Renderer --> Veo[Veo 3.1 Fast<br/>Vertex AI]
     AudioAgent --> EL[ElevenLabs]
 
-    EditorAgent --> Artifacts[[artifacts/<br/>final.fcpxml + mp4]]
+    EditorAgent --> Hyperframes[[Hyperframes<br/>lint + render CLI]]
+    Hyperframes --> Artifacts[[artifacts/edit/<br/>index.html + out.mp4]]
 
     Producer -.-> Events
     Renderer -.-> Events
@@ -179,8 +180,9 @@ flowchart TD
     NextShot -->|Yes| ShotLoop
     NextShot -->|No| QC["Cross-shot QC:<br/>continuity, budget, duration"]
     QC --> Audio["Audio Agent:<br/>dialogue & SFX"]
-    Audio --> Edit["Editor Agent:<br/>assemble FCPXML"]
-    Edit --> End(["Done:<br/>final.fcpxml + mp4"])
+    Audio --> Edit["Editor Agent:<br/>Hyperframes composition"]
+    Edit --> Archive["composition.zip<br/>(portable re-render bundle)"]
+    Edit --> End(["Done:<br/>artifacts/edit/out.mp4"])
 ```
 
 Cross-shot reconciliation (continuity, duration, budget) happens in Producer after all shots reach `approved`. That's where the cross-shot QC Tier-1 earns its existence.
@@ -432,7 +434,7 @@ The router and renderer emit events too (`event_type = 'route_decision' | 'rende
 | [router/](../router/) | Router logic + `capabilities.yaml` |
 | [schemas/](../schemas/) | JSON Schemas (manifest + any others) |
 | [state/](../state/) | Live pipeline state: `manifest.json`, `events.db` |
-| [artifacts/](../artifacts/) | Pipeline outputs: renders, audio, final FCPXML + mp4 |
+| [artifacts/](../artifacts/) | Pipeline outputs: shot renders, audio, Editor-Agent workspace (`artifacts/edit/` — Hyperframes composition `index.html` + assets, rendered `out.mp4`, zipped `composition.zip` bundle) |
 | [demo/fixtures/](../demo/) | Fixture responses for `DEMO_MODE=1` (live APIs off) |
 | [scripts/](../scripts/) | Ops helpers — e.g. [verify_vertex.sh](../scripts/verify_vertex.sh) |
 | [tests/](../tests/) | Router unit tests, manifest schema tests, state-transition tests |
@@ -453,5 +455,5 @@ The router and renderer emit events too (`event_type = 'route_decision' | 'rende
 - Not a general-purpose video platform. One 30–60s film, 8–15 shots, one genre slice.
 - Not integrating every provider. Two models on the primary path is enough.
 - Not a web UI. CLI + manifest inspection is the interface.
-- Not manual compositing (text overlays, effects). FCPXML out; a real editor polishes.
+- Not a manual compositing GUI (text overlays, effects). The Editor Agent writes an HTML composition (Hyperframes) rendered deterministically to MP4; if the render loop exhausts it escalates to the Producer. Hyperframes is the sole renderer — no silent alternate formats.
 - Not exhaustive test coverage — router decisions, manifest validation, and state transitions need tests; provider adapters rely on fixture replay.
