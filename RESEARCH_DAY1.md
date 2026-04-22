@@ -1,4 +1,4 @@
-# Scaling Managed Agents: Decoupling the Brain from the Hands
+# Day 1 Research: Scaling Managed Agents
 
 Harnesses encode assumptions that go stale as models improve. **Managed Agents**—Anthropic’s hosted service for long-horizon agent work—is built around interfaces that stay stable as harnesses evolve.
 
