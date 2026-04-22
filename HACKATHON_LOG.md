@@ -9,6 +9,32 @@ Format: `[ISO-timestamp] <tag>: <one-line entry>`. Multi-line notes allowed unde
 
 ## Day 2 — Wed Apr 22
 
+### 2026-04-23T09:30:00Z — Editor pivot: Hyperframes replaces FCPXML as default renderer
+The Editor Agent now outputs a Hyperframes HTML composition rendered to MP4 via `npx hyperframes render`. FCPXML remains a documented fallback in `prompts/editor_agent.md § Fallback` for when the Hyperframes retry loop exhausts. Pivot was gated on two PROBE_REPORT conditions — both satisfied this session before any production code was touched:
+
+**Condition 1 (Managed Agents sandbox compatibility)**: empirically verified via [scratch/managed_agents_hyperframes_probe.py](scratch/managed_agents_hyperframes_probe.py). A real Managed Agents session (`managed-agents-2026-04-01` beta, Opus 4.7) ran the six-step verification in 77s: Node 22.22.2 + npm 10.9.7 + ffmpeg 6.1.1 (via `packages.apt: ["ffmpeg"]`), Chrome auto-downloaded at 107.4MB, blank composition rendered to a valid 27,346-byte MP4 (md5 `a0d5625a16271e0274563466ab36ee4e`). Default Puppeteer launch, no `--docker`, no flags. Session terminated cleanly on `session.status_idle`. Resources archived.
+
+**Condition 2 (real tier-2 agent dispatch through our runtime)**: verified via [scratch/real_dispatch_probe.py](scratch/real_dispatch_probe.py). PromptSmith with the production system prompt at [prompts/prompt_smith.md](prompts/prompt_smith.md), dispatched through `src.producer.dispatch()` against `claude-opus-4-5-20251101` (API-available target; swap to 4-7 when live), produced an on-brief prompt honoring tone/artistic_style/provider grammar. events.db audit: `dispatch_intent #1 → dispatch_result #2`, contracts fired correctly (no revision flag → judge contract skipped).
+
+**Pivot surface** — all five PROBE_REPORT § Pivot recommendation steps landed:
+
+- **Schema** ([schemas/manifest.schema.json](schemas/manifest.schema.json)): `edit.fcpxml_path` / `fcpxml_version` replaced with renderer-agnostic `edit.renderer` (enum `hyperframes|fcpxml`), `edit.renderer_version`, `edit.composition_path`. `edit.render_path` unchanged. Required fields: `status` + `renderer`.
+- **Editor Agent prompt** ([prompts/editor_agent.md](prompts/editor_agent.md)): rewritten around the Hyperframes workflow — workspace layout, composition authoring rules (the `class="clip"` requirement, `window.__timelines` GSAP pattern, no-network determinism constraints), track layout convention, `npx hyperframes lint --json` preflight gate, 3-iteration render retry loop, FCPXML fallback path. Contracts 1 & 5 references preserved unchanged.
+- **Agent spec** ([docs/agents.md § Tier 2 — Editor Agent](docs/agents.md)): Tools/Skills/Environment/Outcomes rows rewritten. Skills row references `hyperframes`, `hyperframes-cli`, `gsap` (installable via `npx skills add heygen-com/hyperframes`). Environment is the Managed Agents cloud sandbox with `packages.apt: ["ffmpeg"]`.
+- **Project doc** ([CLAUDE.md](CLAUDE.md)): project one-liner updated; `§ Non-goals` FCP bullet reshaped (we do compositing now, just deterministically in HTML); new `§ Editor toolchain — Hyperframes` section explaining the why + runtime fit.
+- **Tool adapter** ([src/producer/hyperframes.py](src/producer/hyperframes.py)): `HyperframesTool` class — Tool-Protocol compliant, `name = "editor_agent"`. Runs lint as preflight (refuses to render on `errorCount > 0`), then render with a configurable timeout. Returns a dict carrying status/exit_code/duration_s/output_path/output_size_bytes/output_md5/renderer/renderer_version/lint/stdout_tail/stderr_tail. Maps cleanly into a `dispatch_result` EventLog payload. Hermetic-tested against injected subprocess.run stubs.
+
+**Contracts layer, Producer runtime, Router, Shot Judge / Audio / CD / Screenwriter / PromptSmith prompts — all untouched**. The Editor was always the thinnest tier-2 agent because its job is narrow (read manifest → emit composition → render); Hyperframes fits that shape better than FCPXML.
+
+**Tests**: 11 new in [tests/producer/test_hyperframes.py](tests/producer/test_hyperframes.py) — happy path, lint failure refuses to render, render non-zero exit, zero-byte output failure, custom output names, project_dir override, subprocess timeout propagation, stdout tail bounded, end-to-end through `dispatch()` with EventLog capture. Full suite **174/174 passing** (11 new + 163 preexisting).
+
+**Probe artifacts** live under `scratch/hyperframes-probe/` + `scratch/*_probe.py`, gitignored. Durable evidence for the pivot decision: [PROBE_REPORT.md](scratch/hyperframes-probe/PROBE_REPORT.md), [managed_agents_probe_transcript.txt](scratch/hyperframes-probe/managed_agents_probe_transcript.txt), three deterministic MP4s.
+
+Next session candidates:
+- Wire a CLI entry point that composes the full pipeline loop with real adapters (PromptSmith, Shot Judge, Editor via HyperframesTool) through `src.producer.dispatch`.
+- Sample composition fixtures for `DEMO_MODE=1` so Day-6 recording runs offline.
+- End-to-end smoke test that authors a minimal Hyperframes composition from a manifest and renders, verifying the full Editor path on real audio+video assets.
+
 ### 2026-04-23T05:45:00Z — Producer runtime skeleton + Tier-3 prompts landed
 The Producer's orchestration shell is now executable code, and the Tier-3 prompts (Screenwriter, PromptSmith) are written as the read-side consumers of Contracts 2 and 3.
 

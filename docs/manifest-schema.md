@@ -94,13 +94,21 @@ Status: `draft | approved`.
 
 ```json
 {
-  "fcpxml_path": "artifacts/edit/final.fcpxml",
-  "fcpxml_version": "1.13",
+  "renderer": "hyperframes",
+  "renderer_version": "0.4.12",
+  "composition_path": "artifacts/edit/index.html",
   "render_path": "artifacts/edit/final.mp4",
   "total_duration_s": 58.4,
   "status": "approved"
 }
 ```
+
+`renderer` selects the output toolchain. Default is `"hyperframes"` — an HTML
+composition (`composition_path`) rendered to MP4 via headless Chrome + FFmpeg.
+Fallback is `"fcpxml"` when the Hyperframes self-verification loop exhausts
+retries (see `prompts/editor_agent.md § Fallback`); the `composition_path` in
+that case points at an FCPXML file and `renderer_version` holds the FCPXML
+format version (e.g., `"1.13"`).
 
 Status: `pending | rendering | approved | failed`.
 

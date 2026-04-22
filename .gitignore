@@ -54,3 +54,20 @@ demo/fixtures/**/*.mp3
 # Logs
 *.log
 logs/
+
+# scratch/ — probe evidence is tracked; regenerable scaffolding + heavy artifacts are not.
+# Tracked: PROBE_REPORT.md, probe scripts, transcripts (the evidence that justified the pivot).
+# Ignored: hyperframes init scaffolding (recreatable via `npx hyperframes init`), rendered MP4s,
+# per-agent-harness skill symlinks (the skills installer fans out to ~30 dot-dirs), npm caches,
+# the local probe events.db.
+scratch/*/node_modules/
+scratch/*/.*
+scratch/*/skills/
+scratch/*/skills-lock.json
+scratch/*/*.mp4
+scratch/*.db
+scratch/hyperframes-probe/AGENTS.md
+scratch/hyperframes-probe/CLAUDE.md
+scratch/hyperframes-probe/hyperframes.json
+scratch/hyperframes-probe/index.html
+scratch/hyperframes-probe/meta.json

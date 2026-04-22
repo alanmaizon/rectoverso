@@ -1,0 +1,78 @@
+
+=========== attempt: model=claude-opus-4-7 ===========
+[probe] creating environment (model=claude-opus-4-7, beta=managed-agents-2026-04-01)
+[probe] environment.id = env_0118P86tmzPmc7sWMGnfR2FU
+[probe] creating agent
+[probe] agent.id = agent_011CaKT6gMrqvrhNdjwdbxAH
+[probe] creating session
+[probe] session.id = sesn_011CaKT6hV5iBt2cW9a76xoU
+[probe] opening event stream
+[probe] user.message sent; awaiting events (will stop on session.status_idle)
+[   2.3s] session.status_running
+[   2.3s] user.message :: [text]Run the six-step verification sequence. Return the PROBE_RESULT JSON line as specified in your system prompt.
+[   2.3s] span.model_request_start
+[   5.2s] agent.thinking
+[   5.2s] agent.tool_use
+[   5.2s] span.model_request_end
+[  16.5s] agent.tool_result :: [text]v22.22.2
+10.9.7
+
+[  16.5s] span.model_request_start
+[  17.9s] agent.message :: [text]Step 1: Node v22.22.2 and npm 10.9.7 available.
+[  17.9s] agent.tool_use
+[  17.9s] span.model_request_end
+[  19.3s] agent.tool_result :: [text]ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+[  19.3s] span.model_request_start
+[  22.5s] agent.message :: [text]Step 2: FFmpeg 6.1.1 available.
+[  22.5s] agent.tool_use
+[  22.5s] span.model_request_end
+[  38.6s] agent.tool_result :: [text]npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+  Hyperframes collects anonymous usage data to improve the tool.
+  No personal info, file paths, or
+[  38.6s] span.model_request_start
+[  40.0s] agent.message :: [text]Step 3: Scaffold complete at /tmp/hf/probe.
+[  40.0s] agent.tool_use
+[  40.0s] span.model_request_end
+[  51.3s] agent.tool_result :: [text]npm warn exec The following package was not found and will be installed: hyperframes@0.4.12
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+{
+  "ok"
+[  51.3s] span.model_request_start
+[  51.3s] agent.message :: [text]Step 4: Lint passed with 0 errors/warnings.
+[  51.3s] agent.tool_use
+[  51.3s] span.model_request_end
+[  67.5s] agent.tool_result :: [text]
+◆  Rendering probe → /tmp/hf/probe/out.mp4
+   30fps · standard · 3 workers (auto — 4 cores detected)
+
+[?25l│
+◒  Checking browser[1G[J◐  Downloading Chrome... 0% (31.3 KB / 107.4 MB)[1G[J◓
+[  67.5s] span.model_request_start
+[  73.9s] agent.message :: [text]Step 5: Render complete, out.mp4 produced.
+[  73.9s] agent.tool_use
+[  73.9s] span.model_request_end
+[  73.9s] agent.tool_result :: [text]-rw-r--r-- 1 root root 27346 Apr 22 20:37 /tmp/hf/probe/out.mp4
+a0d5625a16271e0274563466ab36ee4e  /tmp/hf/probe/out.mp4
+
+[  73.9s] span.model_request_start
+[  77.0s] agent.message :: [text]Step 6: File exists, 27346 bytes, md5 a0d5625a16271e0274563466ab36ee4e.
+
+PROBE_RESULT: {"verdict":"PASS","mp4_bytes":27346,"mp4_md5":"a0d5625a16271e0274563466ab36ee4e","notes":"all 6 steps ok; node
+[  77.0s] span.model_request_end
+[  77.0s] session.status_idle
+[probe] session idle — stopping stream
+[probe] archived session sesn_011CaKT6hV5iBt2cW9a76xoU
+[probe] archived agent agent_011CaKT6gMrqvrhNdjwdbxAH
+[probe] archived environment env_0118P86tmzPmc7sWMGnfR2FU
+
+[probe] transcript written to /Users/alanmaizon/GitHub/rectoverso/scratch/hyperframes-probe/managed_agents_probe_transcript.txt
+
+=== PROBE_RESULT ===
+{
+  "verdict": "PASS",
+  "mp4_bytes": 27346,
+  "mp4_md5": "a0d5625a16271e0274563466ab36ee4e",
+  "notes": "all 6 steps ok; node 22.22.2, ffmpeg 6.1.1, hyperframes 0.4.12, lint clean, 10s blank render"
+}

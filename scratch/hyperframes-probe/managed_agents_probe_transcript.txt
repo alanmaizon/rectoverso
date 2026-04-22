@@ -1,0 +1,82 @@
+session.status_running
+user.message :: [text]Run the six-step verification sequence. Return the PROBE_RESULT JSON line as specified in your system prompt.
+span.model_request_start
+agent.thinking
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]v22.22.2
+10.9.7
+
+span.model_request_start
+agent.message :: [text]Step 1: Node v22.22.2 and npm 10.9.7 available.
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+
+span.model_request_start
+agent.message :: [text]Step 2: FFmpeg 6.1.1 available.
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+  Hyperframes collects anonymous usage data to improve the tool.
+  No personal info, file paths, or content is collected.
+
+  Disable anytime: hyperframes telemetry disable
+
+Created probe/
+  AGENTS.md
+  CLAUDE.md
+  hyperframes.json
+  index.html
+  meta.json
+
+Get started:
+
+  1. Install AI coding skills (one-time):
+     npx skills add heygen-com/hyperframes
+
+  2. Open this project with your AI coding agent:
+span.model_request_start
+agent.message :: [text]Step 3: Scaffold complete at /tmp/hf/probe.
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]npm warn exec The following package was not found and will be installed: hyperframes@0.4.12
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+{
+  "ok": true,
+  "errorCount": 0,
+  "warningCount": 0,
+  "infoCount": 1,
+  "findings": [],
+  "filesScanned": 1,
+  "_meta": {
+    "version": "0.4.12",
+    "latestVersion": "0.4.12",
+    "updateAvailable": false
+  }
+}
+
+span.model_request_start
+agent.message :: [text]Step 4: Lint passed with 0 errors/warnings.
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]
+◆  Rendering probe → /tmp/hf/probe/out.mp4
+   30fps · standard · 3 workers (auto — 4 cores detected)
+
+[?25l│
+◒  Checking browser[1G[J◐  Downloading Chrome... 0% (31.3 KB / 107.4 MB)[1G[J◓  Downloading Chrome... 8% (8.7 MB / 107.4 MB)[1G[J◑  Downloading Chrome... 15% (16.6 MB / 107.4 MB)[1G[J◒  Downloading Chrome... 27% (29.6 MB / 107.4 MB)[1G[J◐  Downloading Chrome... 41% (44.6 MB / 107.4 MB)[1G[J◓  Downloading Chrome... 56% (60.6 MB / 107.4 MB)[1G[J◑  Downloading Chrome... 69% (
+span.model_request_start
+agent.message :: [text]Step 5: Render complete, out.mp4 produced.
+agent.tool_use
+span.model_request_end
+agent.tool_result :: [text]-rw-r--r-- 1 root root 27346 Apr 22 20:37 /tmp/hf/probe/out.mp4
+a0d5625a16271e0274563466ab36ee4e  /tmp/hf/probe/out.mp4
+
+span.model_request_start
+agent.message :: [text]Step 6: File exists, 27346 bytes, md5 a0d5625a16271e0274563466ab36ee4e.
+
+PROBE_RESULT: {"verdict":"PASS","mp4_bytes":27346,"mp4_md5":"a0d5625a16271e0274563466ab36ee4e","notes":"all 6 steps ok; node 22.22.2, ffmpeg 6.1.1, hyperframes 0.4.12, lint clean, 10s blank render"}
+span.model_request_end
+session.status_idle

@@ -106,26 +106,28 @@ Coordination: no agent-to-agent direct calls. All handoffs through `state/manife
 | Model | `claude-opus-4-7` |
 | Tier | Managed Agent |
 | Invocation | Once, after all shots `approved` and audio complete |
-| Tools | `bash` (ffprobe, ffmpeg), file ops |
-| Skills | `fcpxml-generation` (templates + validation script) |
-| Environment | Container with ffmpeg, xmllint |
-| Outcomes | Generated FCPXML validates against DTD AND `total_runtime_frames == sum(shot_runtime_frames) ± 1` |
+| Tools | `bash` (via `agent_toolset_20260401`), file ops, the `HyperframesTool` subprocess adapter in `src/producer/hyperframes.py` |
+| Skills | `hyperframes`, `hyperframes-cli`, `gsap` (HeyGen-maintained skills bundled with `npx skills add heygen-com/hyperframes`) |
+| Environment | Managed Agents cloud sandbox (Ubuntu-class, Node 22+ pre-installed, `packages.apt: ["ffmpeg"]`). Hyperframes auto-downloads Chrome at first render. |
+| Outcomes | `npx hyperframes lint --json` reports `{"ok": true, "errorCount": 0}` AND `npx hyperframes render --output out.mp4` produces a non-zero-byte MP4 |
 | System prompt | [prompts/editor_agent.md](../prompts/editor_agent.md) |
 
-**Output spec**:
-- Target: FCPXML **1.13** (Final Cut Pro 12.2). Verify version before generation; bump if FCP 12.2 ships 1.14+.
-- Single spine, sequential shots in `order`.
-- Audio: dialogue on A1, music on A2 (ducked −8dB under dialogue), SFX on A3.
-- Transitions: cut by default; dissolve only when brief calls for it.
-- Timecode base: 24fps (cinematic) unless brief specifies otherwise.
+**Output spec (default renderer: `hyperframes`)**:
+- HTML composition (`artifacts/edit/index.html`) with deterministic track layout: picture spine on track 0, dialogue on 1, music on 2 (−8dB ducked under dialogue via GSAP), SFX on 3.
+- `class="clip"` on every visible timed element (framework requirement).
+- Only deterministic logic — no `Date.now()`, no `Math.random()`, no network fetches.
+- Transitions: hard cut by default; GSAP dissolves only where brief calls for them.
+- Timecode: 30fps default (Hyperframes). 24fps via `data-fps` on the root if brief demands cinematic feel.
 
-**Self-verification loop** (Outcomes-driven):
-1. Generate FCPXML.
-2. Validate with `xmllint --dtdvalid FCPXMLv1_13.dtd` (DTD shipped with `fcpxml-generation` skill).
-3. Probe generated file durations with `ffprobe`; confirm sum matches spine.
-4. If either fails: inspect error, revise, regenerate. Max 3 iterations.
+**Self-verification loop**:
+1. Author/edit `index.html` (invoke `hyperframes` + `gsap` skills before writing — they encode framework patterns not in generic web docs).
+2. `npx hyperframes lint --json` → parse `findings[]`; fix all errors; repeat until `errorCount == 0`.
+3. `npx hyperframes render --output out.mp4` → verify exit code 0 AND non-zero output size.
+4. If render fails: inspect stderr, revise, regenerate. **Max 3 render iterations**.
+5. If still failing: fall back to FCPXML (below).
 
-**Fallback**: if FCPXML blocks end-to-end, ship an `ffmpeg concat` MP4 as `edit.render_path`, mark `edit.fcpxml_path` absent, and document in `history`. Claim FCPXML as roadmap in submission.
+**Fallback path** (only when Hyperframes retries exhaust):
+Set `edit.renderer = "fcpxml"`, emit FCPXML 1.13 + `ffmpeg concat` MP4. Schema keeps both renderers valid; `composition_path` points at either `index.html` or the `.fcpxml` file. Document the fallback in `history`. Shipping an MP4 always beats shipping nothing.
 
 ---
 

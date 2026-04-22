@@ -38,6 +38,7 @@ from __future__ import annotations
 
 from .dispatch import dispatch
 from .events import EventLog, Event, KINDS, open_event_log
+from .hyperframes import HyperframesTool
 from .manifest_io import (
     LoadResult,
     ManifestValidationError,
@@ -57,6 +58,7 @@ __all__ = [
     "Event",
     "KINDS",
     "open_event_log",
+    "HyperframesTool",
     "LoadResult",
     "ManifestValidationError",
     "load_manifest",

@@ -60,7 +60,7 @@ def minimal_manifest() -> dict[str, Any]:
         "script": {"status": "draft", "version": 1, "path": "artifacts/script.md"},
         "shots": [],
         "audio": {"dialogue": [], "sfx": []},
-        "edit": {"status": "pending", "fcpxml_version": "1.13"},
+        "edit": {"status": "pending", "renderer": "hyperframes"},
         "budget": {
             "cap_usd": 151.0,
             "spent_usd": 0.0,

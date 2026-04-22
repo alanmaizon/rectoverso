@@ -426,11 +426,25 @@
     "edit": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "fcpxml_version"],
+      "required": ["status", "renderer"],
       "properties": {
-        "fcpxml_path": { "$ref": "#/$defs/relativePath" },
-        "fcpxml_version": { "type": "string", "pattern": "^1\\.\\d+$" },
-        "render_path": { "$ref": "#/$defs/relativePath" },
+        "renderer": {
+          "enum": ["hyperframes", "fcpxml"],
+          "description": "Output renderer. 'hyperframes' is the default (HTML composition -> MP4 via headless Chrome + FFmpeg). 'fcpxml' is the fallback path documented in prompts/editor_agent.md when the Hyperframes render loop exhausts retries."
+        },
+        "renderer_version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version of the chosen renderer (e.g., Hyperframes package version '0.4.12', or FCPXML format '1.13'). Populated once the first render attempt completes."
+        },
+        "composition_path": {
+          "$ref": "#/$defs/relativePath",
+          "description": "Source of truth for the edit. For renderer='hyperframes', this is the HTML composition file (index.html); for renderer='fcpxml', the FCPXML file."
+        },
+        "render_path": {
+          "$ref": "#/$defs/relativePath",
+          "description": "Assembled MP4 produced by the renderer."
+        },
         "total_duration_s": { "type": "number", "minimum": 0 },
         "status": { "enum": ["pending", "rendering", "approved", "failed"] }
       }

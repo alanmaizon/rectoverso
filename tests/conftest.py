@@ -55,7 +55,7 @@ def minimal_manifest() -> dict:
         "script": {"status": "draft", "version": 1, "path": "artifacts/script/v1.fountain"},
         "shots": [],
         "audio": {"dialogue": [], "sfx": []},
-        "edit": {"status": "pending", "fcpxml_version": "1.13"},
+        "edit": {"status": "pending", "renderer": "hyperframes"},
         "budget": {
             "cap_usd": 151.0,
             "spent_usd": 0.0,
