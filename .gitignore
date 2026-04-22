@@ -1,0 +1,56 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# State — event log is regenerable from renders + cost reports; manifest is tracked
+state/events.db
+state/events.db-journal
+state/events.db-wal
+state/events.db-shm
+
+# Generated artifacts — large binaries; tracked loglines, not media
+artifacts/renders/**/*.mp4
+artifacts/renders/**/*.mov
+artifacts/renders/**/*.webm
+artifacts/audio/**/*.wav
+artifacts/audio/**/*.mp3
+artifacts/audio/**/*.m4a
+artifacts/edit/*.mp4
+artifacts/edit/*.mov
+
+# Demo fixtures — large; stored elsewhere (see demo/README.md when created)
+demo/fixtures/**/*.mp4
+demo/fixtures/**/*.wav
+demo/fixtures/**/*.mp3
+
+# Keep FCPXML text artifacts tracked for inspectability
+!artifacts/edit/*.fcpxml
+
+# IDE / OS
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,828 @@
+Stronger naming angles, with examples:
+
+Built with Opus 4.7 Hackathon — Key Rules & Info
+Scale: 500 builders selected from 20,000+ applicants (2.4% acceptance), across 76 countries. Week-long virtual event with Cerebral Valley.
+Core Rules
+Open source GitHub repo required
+Start from scratch at the event — only submit what you build this week
+No legal/ethical/platform policy violations or unlicensed assets
+Team size: solo or up to 2 people
+Two Tracks
+Build from what you know — leverage your niche/domain expertise
+Build for what's next — something only possible now that tools have changed ("easier to demo than to explain")
+Prizes
+Prize	API Credits
+1st place	$50,000
+2nd place	$30,000
+3rd place	$10,000
+Most Creative Opus 4.7 Exploration	$5,000
+Deep Thinking (idea evolution)	$5,000
+Best Use of Claude Managed Agents	$5,000
+Every accepted participant also gets $500 in API credits to use during the event.
+Submission Requirements (due Sun April 26, 8 PM EST)
+Open-source GitHub repo
+Written description — explicitly detail how you used Claude, Managed Agents, and pushed boundaries
+3-minute demo video (Loom/OBS/CapCut → YouTube or public Drive link) — invest real time here; judges weight it heavily
+Judging Criteria
+Impact — real-world potential, who it benefits
+Demo — how compelling/watchable it is
+Opus 4.7 use — how well you leveraged the model
+Depth & execution — how far past your first idea you pushed
+Judging Timeline
+April 26, 8 PM EST — submissions close
+April 27 (Mon) — async round 1, narrowed to top 6
+April 28 (Tue), 12 PM EST — final round, live with Boris Cherney & Jason
+Live Sessions (Discord)
+Wed — AMA with Tarik (Claude Code team)
+Thu — Michael Cohen on Claude Managed Agents
+Fri — Mike Brown (previous hackathon winner)
+Sun — Nihal (previous 3rd place, went viral after)
+Daily 5–6 PM EST — office hours with Claude Code team
+Boris's Tips on Using Opus 4.7 (worth flagging)
+Long-running work is the unlock — 30 minutes to multi-day tasks stay on rails
+Be more precise in prompts — it follows instructions literally
+/loop for repetitive background tasks (PR babysitting, CI cleanup, etc.)
+Routines for scheduled server-side runs (hook MCPs, GitHub, Slack)
+Auto mode for permissions (shift+tab x3) — safer than dangerous mode, no more sitting there approving actions
+Given your AI engineering focus, this lines up well with your primary targets — and the "build from what you know" track is made for someone positioning around AI + creative/technical hybrid work. Want to brainstorm project angles that showcase your strengths, or sketch a system design for something in the "build for what's next" direction?
+
+
+---
+
+sketch a system design for something in the "build for what's next" direction
+
+
+---
+
+Before I sketch, I need one input from you — the direction should come from what only you can uniquely execute, not a generic "cool idea."
+
+
+---
+
+Q: Which domain should anchor the 'build for what's next' project?
+A: Something else — I'll describe
+
+
+---
+
+Go ahead — describe the direction you want to anchor on.
+A few things that would help me sketch something sharp rather than generic:
+The domain or problem space — what world are we operating in (healthcare, education, legal, music, local government, personal knowledge, etc.)?
+What you uniquely bring — the expertise, lived experience, or perspective that makes you the right person to build this (this is the whole point of "build from what you know" and it also strengthens "build for what's next")
+The "only now" element — what about Opus 4.7's capabilities (long-running agents, managed agents, routines, precision) unlocks something that wasn't possible six months ago?
+You don't need to have it fully formed — a rough sketch is fine and I'll help pressure-test and structure it into a system design.
+
+
+---
+
+For the hackathon I want to build an AI filmmaking pipeline — you ingest a creative brief and a multi-agent system handles the full production: one agent writes prompts for Veo/fal.ai/Wan, another makes shot approval decisions, another builds the edit timeline as FCPXML, and another handles voiceover and sound via ElevenLabs. A Producer agent runs QC and enforces file conventions throughout. Everything flows through a shared shot manifest so the pipeline can resume across sessions. Opus 4.7 runs orchestration — its self-verification and long-horizon agentic execution are well-suited to a pipeline that runs over hours with lots of interdependent handoffs.
+
+
+---
+
+This is a strong fit for the hackathon — it hits "build for what's next" (multi-agent filmmaking wasn't viable six months ago), demos beautifully (video output is inherently watchable), and showcases Opus 4.7's long-horizon execution as the core unlock rather than a nice-to-have. Here's a system design.
+System Design: Multi-Agent Filmmaking Pipeline
+Core architecture
+A Producer orchestrator (Opus 4.7) coordinates specialist agents via a shared Shot Manifest — a single source of truth on disk that every agent reads from and writes to. The manifest makes the pipeline resumable, auditable, and debuggable. If any agent fails or a session ends, state persists and work continues from the last committed shot.
+
+                   ┌─────────────────────────┐
+                   │   Creative Brief (MD)   │
+                   └───────────┬─────────────┘
+                               ▼
+                   ┌─────────────────────────┐
+                   │   Producer (Opus 4.7)   │◄──── QC loop
+                   │   orchestrator + QC     │
+                   └───────────┬─────────────┘
+                               │
+        ┌──────────┬───────────┼───────────┬──────────────┐
+        ▼          ▼           ▼           ▼              ▼
+   ┌─────────┐ ┌────────┐ ┌─────────┐ ┌─────────┐   ┌──────────┐
+   │ Screen- │ │ Prompt │ │ Shot    │ │  Audio  │   │  Editor  │
+   │ writer  │ │ Smith  │ │ Judge   │ │  (11L)  │   │ (FCPXML) │
+   └─────────┘ └────────┘ └─────────┘ └─────────┘   └──────────┘
+                               ▲
+                               │ read/write
+                   ┌───────────┴─────────────┐
+                   │  shots/manifest.json    │
+                   │  + assets/ + renders/   │
+                   └─────────────────────────┘
+Agent responsibilities
+Screenwriter — parses the brief, outputs a shot list (scene, action, duration, dialogue, shot type, mood) into the manifest. Runs once per project; re-run on brief changes.
+PromptSmith — per shot, generates model-specific prompts (Veo 3, fal.ai endpoints, Wan) tuned to each model's prompt grammar. Writes prompt_veo, prompt_fal, prompt_wan fields. Picks the right model per shot based on motion complexity, realism needs, cost.
+Renderer — not an LLM agent; a worker that submits jobs to the chosen video API, polls for completion, downloads results to renders/{shot_id}/v{n}.mp4. Retries on transient failures, logs cost per shot.
+Shot Judge — scores each render against the brief criteria (composition, adherence to prompt, continuity with adjacent shots). Either approves, requests re-render with a revised prompt, or escalates to Producer. Uses vision capability to actually watch the clip.
+Audio — generates VO lines via ElevenLabs, matches timing to shot durations, produces ambient/SFX cues. Writes audio/{shot_id}.wav plus a timing JSON.
+Editor — assembles the approved shots + audio into FCPXML. Handles transitions, audio ducking under VO, basic color/audio levels spec.
+Producer (Opus 4.7, orchestrator) — schedules work, enforces file conventions, runs cross-shot QC (do shots 3 and 4 have continuity? is total runtime within target?), and makes the hard calls when Shot Judge escalates.
+The Shot Manifest (the keystone)
+Single JSON file, append-only state transitions, one record per shot:
+
+json
+{
+  "shot_id": "sh_003",
+  "scene": 1,
+  "duration_s": 4.2,
+  "description": "wide establishing, coastal cliffs at dawn",
+  "model": "veo-3",
+  "prompt_veo": "...",
+  "render_path": "renders/sh_003/v2.mp4",
+  "audio_path": "audio/sh_003.wav",
+  "status": "approved",
+  "judge_notes": [...],
+  "cost_usd": 0.84,
+  "history": [{"ts": "...", "event": "render_v1_rejected", "reason": "..."}]
+}
+Every agent reads its inputs from the manifest and writes its outputs back with a status transition. No agent talks to another agent directly — all coordination is through state. This is what makes the pipeline resumable: kill it mid-run, restart, and the Producer reconciles what's done vs. pending.
+Why this fits Opus 4.7 specifically
+Boris called out long-running work, precision on instructions, and auto-mode permissions as the 4.7 unlocks. This pipeline hits all three:
+Hours-long runs — a 90-second film might be 25 shots × 2-3 render attempts × polling/judging. That's exactly the "stays on rails" regime 4.7 is built for.
+Precise handoffs — each agent has a tight contract (read these manifest fields, write these). 4.7's instruction-following keeps agents from drifting into each other's responsibilities.
+Managed Agents as a prize target — the Screenwriter, PromptSmith, Shot Judge, and Audio agents are natural candidates to deploy as Claude Managed Agents with specific system prompts, rather than re-prompting a single Claude instance. The Producer invokes them as tools. This directly addresses the "Best Use of Claude Managed Agents" prize ($5K).
+Demo strategy
+The demo is the highest-weighted judging axis after impact. Structure the 3-minute video as:
+0:00–0:20 — show the input: a creative brief in plain markdown ("30-second teaser for a fictional coastal thriller, moody, minimal dialogue")
+0:20–1:30 — split-screen: live terminal showing Producer orchestrating + manifest updating in real time, while Shot Judge rejects a take and PromptSmith revises. This is the "only possible now" moment — show the agents arguing over a shot.
+1:30–2:30 — the finished film plays end-to-end. Let it breathe.
+2:30–3:00 — architecture slide, cost breakdown, resume-from-checkpoint demo (kill the process mid-run, restart, it picks up).
+Scope discipline for a one-week build
+Cut ruthlessly. For the submission:
+One video model integration end-to-end (pick Veo 3 or fal.ai, not both). Leave the others as pluggable interfaces.
+One reference film at ~30 seconds, 8-12 shots. Not a feature.
+Shot Judge on vision is the riskiest agent — have a fallback path where it scores on prompt adherence via text metadata if vision scoring is flaky.
+FCPXML output is a good differentiator (real editors can open it in Final Cut) but if it eats two days, fall back to a rendered MP4 via ffmpeg concat and claim FCPXML as roadmap.
+Risks to flag honestly
+Video API cost and latency — $500 in hackathon credits covers Claude, not Veo/fal. Budget your video generation separately; a single 30-second film at 3 takes per shot could run $50-150 depending on models.
+Shot Judge reliability — LLM-as-critic on video is the least proven part. Have a "human approval" fallback mode where the Producer pauses and asks you to approve borderline shots. This is actually a good demo — show the human-in-the-loop option, then show full auto mode.
+Continuity — true visual continuity across generated shots is still hard. Lean into a brief that works with that limitation: anthology, dreamlike, or cut-heavy edits where rough continuity is stylistically fine.
+Want me to draft the initial manifest schema and Producer system prompt next, or work through the Managed Agents decomposition in more detail?
+
+
+---
+
+Managed Agents decomposition
+
+
+---
+
+Before I decompose — I want to flag one thing honestly: Claude Managed Agents was announced as a new feature in the hackathon kickoff, but I don't have detailed docs on its exact API surface, agent definition format, or invocation model from my training data. Let me check current docs so the decomposition matches the real feature, not my guess at it.
+
+Architected tiered agent decomposition balancing managed versus plain API calls
+Architected tiered agent decomposition balancing managed versus plain API calls
+Good — I pulled the current Managed Agents docs so the decomposition matches the real API shape, not my guess at it. Key facts that shape the design:
+Managed Agents is a hosted harness: you define an agent (model + system prompt + tools), create an environment (cloud container), then run stateful sessions with append-only event logs that persist across disconnections.
+Supports multi-agent coordination (research preview) — the Producer invoking specialist agents is a first-class pattern.
+Sessions stream events: agent.message, agent.tool_use, session.status_idle — the Producer can monitor child agents in real time.
+There's an Outcomes feature (research preview) where you define success criteria and the agent self-evaluates and iterates — Anthropic reports up to 10-point gains on structured file generation. This is directly relevant to your pipeline.
+Skills attach to agents as reusable modular capabilities (filesystem-based, up to 8 per request).
+Now the decomposition.
+Principle: not everything should be a Managed Agent
+The prize criterion is "best use of managed agents" — that rewards thoughtful application, not maximalism. Using Managed Agents for a stateless one-shot prompt generation is a weaker story than using plain API calls there and reserving Managed Agents for the work that genuinely needs the harness.
+Managed Agent fits: long-running work, file ops, tool orchestration, stateful resumption, multi-step self-verification.
+Plain Messages API fits: single-turn text-in/text-out, high-volume fast calls, pure generation with no tool use.
+Not an agent at all: anything that's just polling a REST API on a schedule.
+Tiered architecture
+
+┌─────────────────────────────────────────────────────────┐
+│ TIER 1 — Orchestrator (1 Managed Agent)                 │
+│   Producer: long-running session, owns manifest,        │
+│   invokes child agents, runs cross-shot QC              │
+└─────────────────────────────────────────────────────────┘
+                          │ invokes via
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ TIER 2 — Specialists (3 Managed Agents)                 │
+│   Shot Judge   │  Audio Agent   │  Editor Agent         │
+│   (vision QC)  │  (11L + files) │  (FCPXML + ffmpeg)    │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ TIER 3 — Stateless calls (plain Messages API)           │
+│   Screenwriter  │  PromptSmith                          │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ TIER 4 — Workers (plain Python, no LLM)                 │
+│   Renderer: submit/poll/download from Veo, fal, Wan     │
+└─────────────────────────────────────────────────────────┘
+Per-agent configuration
+Tier 1 — Producer (Managed Agent)
+Aspect	Config
+Model	claude-opus-4-7
+System prompt	Enforces manifest schema, file naming conventions, QC gates, escalation rules
+Tools	agent_toolset_20260401 (bash, file ops), child-agent invocation, web search off
+Environment	Cloud container with ffmpeg, ffprobe, node, python pre-installed
+Skills	Custom: shot-manifest-schema, fcpxml-conventions
+Outcomes	"Manifest contains N approved shots; each shot has render_path, audio_path, and passed judge; FCPXML validates against schema"
+Session lifetime	Full project run (hours)
+The Producer is the only agent with an opinion about the whole film. It makes go/no-go calls, resolves Shot Judge escalations, and enforces continuity. Its session log is the audit trail — you can replay any decision.
+Tier 2 — Shot Judge (Managed Agent)
+Aspect	Config
+Model	claude-opus-4-7 (vision)
+System prompt	Scoring rubric: composition, prompt adherence, continuity with N±1 shots, no artifact flags
+Tools	File read (to load renders/{shot_id}/*.mp4), manifest read/write
+Environment	Same container, shared volume with Producer
+Outcomes	"Score ≥ threshold OR revised prompt suggestion written to manifest"
+Invocation	Per-shot, from Producer
+Why Managed Agent here and not plain API: the Judge benefits from seeing prior judgments in the session log (continuity reasoning) and from writing structured feedback directly to the manifest file rather than round-tripping through the Producer.
+Tier 2 — Audio Agent (Managed Agent)
+Aspect	Config
+Model	claude-opus-4-7
+System prompt	VO pacing rules, ducking conventions, SFX selection logic
+Tools	Bash (ElevenLabs API calls via curl/SDK), file ops, ffprobe for duration checks
+Environment	Container with ffmpeg, ElevenLabs SDK, API keys via secret
+MCP	ElevenLabs MCP server if/when available; otherwise direct API
+Outcomes	"Each shot has audio_path; VO duration ≤ shot duration × 0.95; timing.json written"
+Managed Agent here because it's genuinely multi-step per shot: generate VO, probe duration, decide if it fits, regenerate with different pacing if not, write timing metadata. That iteration loop is exactly what the harness is for.
+Tier 2 — Editor Agent (Managed Agent)
+Aspect	Config
+Model	claude-opus-4-7
+System prompt	FCPXML 1.11 schema, transition conventions, audio ducking spec
+Tools	Bash (ffprobe for exact shot durations), file ops
+Skills	Custom: fcpxml-generation (XML templates, validation script)
+Outcomes	"Generated FCPXML validates against schema AND total runtime = sum of shot durations ± 1 frame"
+Strong candidate for the Outcomes feature — "produce a valid FCPXML" is a concrete, machine-checkable target. The self-evaluate-and-iterate loop is where the 10-point improvement Anthropic reports should show up.
+Tier 3 — Screenwriter and PromptSmith (plain Messages API)
+Both are single-turn: brief → shot list, shot → model-specific prompts. No tool use needed, no state to maintain, faster and cheaper as direct API calls. The Producer calls them, parses the JSON response, writes to manifest itself.
+Do not make these Managed Agents just to pad the count. It dilutes the story for the prize.
+Tier 4 — Renderer (no LLM)
+Plain Python worker. Takes (shot_id, model, prompt) from a queue, submits to the video API, polls, downloads. No intelligence needed here — an LLM would be wasteful.
+How the Producer invokes child agents
+Three patterns, pick based on coupling needs:
+A) Child agent as tool (tightest coupling) — Producer has custom tools like invoke_shot_judge(shot_id) and invoke_audio_agent(shot_id). The tool implementation creates a session, streams events, returns a summary. Cleanest for the demo; Producer's session log shows clear delegation.
+B) Independent sessions with manifest as bus (loosest coupling) — Producer writes status: "ready_for_audio" on a shot; each specialist agent polls or subscribes to manifest changes. More robust (specialists can run in parallel, crash-independent) but harder to demo because coordination is implicit.
+C) Hybrid — Shot Judge and Editor as tools (synchronous, Producer waits); Audio Agent as independent (runs in parallel with rendering since it doesn't need the video). This is what I'd build.
+What makes this a prize-worthy Managed Agents story
+The judging criterion is how well you leveraged the platform. Concrete hooks:
+Resumption demo — kill the Producer session mid-render; restart referencing the same agent.id; show it reading the manifest, reconciling state, resuming exactly where it stopped. This is the headline Managed Agents capability and it's dramatic in a 3-minute video.
+Outcomes on the Editor — show the FCPXML failing validation on first pass, the agent detecting the failure via outcome check, iterating, and producing valid output. This is the 10-point-improvement claim made visible.
+Multi-agent coordination in the session log — export Producer's event stream showing agent.tool_use events for Shot Judge, Audio Agent, Editor. Clean, auditable, replayable.
+Skills as first-class — at least one custom skill (FCPXML generation is the cleanest candidate) rather than stuffing everything into the system prompt.
+Risks to name honestly
+Outcomes is research preview. Needs access request; may not be available to you in time. Have a fallback where the Producer does the iteration loop explicitly.
+Multi-agent coordination is also research preview. If you don't have access, invoke child agents as subprocess-like tools from the Producer's bash access rather than through the first-class multi-agent interface. Same outcome, less ceremony.
+ElevenLabs MCP server may not exist yet — if not, the Audio Agent calls the REST API via bash. Works fine, slightly less elegant.
+Container file sharing across sessions — verify that specialist agents can read files the Producer writes. The docs show shared containers within a conversation thread; cross-agent file sharing needs confirmation. Worst case, pass content through the invocation payload.
+Want me to draft the Producer's system prompt and the manifest schema next, or write the actual ant beta:agents create commands for each agent?
+
+
+---
+
+Lets make a public post on LinkedIn, just to share that I started working, and tag cerebral valley and anthropic
+
+
+---
+
+
+A
+Short & understated
+
+B
+Build-in-public energy
+
+C
+Lead with the stakes
+
+
+
+
+Three options with different energies. A few notes:
+LinkedIn's actual tagging uses @ while typing in their UI, not plain text — replace @Anthropic and @Cerebral Valley with real mentions when you post so they get notified.
+Double-check the "20,000+ applicants / 500 selected" stat before posting — it's from the kickoff transcript, but numbers from live talks sometimes get rounded loosely. Feel free to soften to "hundreds of builders globally" if you'd rather not commit to the exact figure.
+If you want to stay understated about project details this early, option 1 is the safest. Option 2 is best if you want engagement — specificity drives it.
+
+
+---
+
+now lets schedule the job to be done, I have an example project, ran end to end to create a sequence of shots, and I have the repo with the code, but the made from zero is ambiguous so if Claude form an idea from a research document, I created and curated 90 second film, but I did manually the crafting, adding text, layering and rendering, upscaling in Final Cut Pro, will that project be relevant to reproduce
+
+
+---
+
+Good instinct to pause on this — the "start from scratch" rule is the one that can get you disqualified, so let's think it through carefully before you commit time.
+What the rule actually says
+From the kickoff transcript: "please start from scratch at this hackathon and build only, and submit only what you build at this event."
+That's the literal constraint. It's not "no prior knowledge" — it's "no prior code reused in the submission."
+Parsing your situation
+You have two distinct assets from the prior project:
+A curated 90-second film you made manually in Final Cut Pro — this is reference material / inspiration, not code. Not a problem.
+A repo with code from the earlier end-to-end sequence generation — this is the ambiguous one.
+The question is whether you reuse that repo or rebuild.
+The honest read
+Most hackathons I've seen interpret "start from scratch" as: no copy-paste of your prior code into the submission repo. Learning from your prior work, reproducing a similar architecture, using the same ideas — all fine. Reusing the actual code — not fine.
+So the reproducibility question matters less than the authorship question. Ask:
+Is the new pipeline's code written fresh this week, even if it does similar things? → Compliant.
+Am I git-cloning the old repo and adding to it? → Not compliant.
+Am I vendoring helper modules or copying prompt templates across? → Gray area, lean toward rewriting.
+Why rewriting is actually the stronger play anyway
+Setting aside compliance, the old project and the new one aren't the same thing:
+Old project	Hackathon project
+Sequence of shots	Full film pipeline (shots + audio + edit + QC)
+Manual FCP assembly	FCPXML auto-assembly
+Single-agent or script-based	Multi-agent with Producer + specialists
+No managed agents	Managed Agents is the centerpiece
+Manual upscaling, text, layering	Agent-handled where possible
+The architectures are genuinely different. A clean rewrite will be faster than grafting managed-agents orchestration onto an older codebase that wasn't designed for it.
+What to do with the old repo
+Use it as reference, not foundation:
+Keep it open in a separate window. Look at it when you need to remember how you handled X.
+Pull out learnings — which prompt formulations worked, which video model handled which shot types well, what failure modes to expect. Bring that knowledge to the new code.
+Don't open the hackathon repo by running cp -r old-project/* new-project/.
+In your submission write-up, be upfront: "Built fresh this week, informed by prior manual experimentation with a similar pipeline that I ran end-to-end before the hackathon." That's honest and strengthens your "build from what you know" story rather than weakening it.
+The 90-second film question
+Can you use it? Two possibilities:
+As the target output to beat. "Last time I did this manually and it took me N hours; here's the pipeline reproducing comparable output autonomously." That's a great framing for the demo video — you have a direct before/after.
+As literal footage in the submission. Don't. The submission should be a film the pipeline produced this week, not the one you made manually before.
+Your 90-second film is valuable as the benchmark, not the deliverable.
+One thing worth confirming
+When in doubt, ask in the Discord office hours channel (5–6 PM EST daily per the kickoff). A one-line question — "I have a prior project with a similar concept that I built manually. I'm rewriting from scratch this week but wanted to confirm that using it as a reference benchmark and describing it in the write-up is fine." — gets you a definitive answer from the organizers and removes the ambiguity entirely. Much better than guessing.
+Scheduling suggestion
+Given you've already lost a few hours of day 1 to planning (worthwhile) and this ambiguity, I'd structure the remaining week like this:
+Today (Tue, day 1 remainder): Post the Discord question. While waiting, sketch the manifest schema and Producer system prompt. Set up a fresh repo. Don't write pipeline code yet.
+Wed (day 2): Tarik AMA at noon EST — worth attending. Build Tier 3 (Screenwriter, PromptSmith) as plain API calls. Get a shot list generating from a brief. Stub the Renderer with a fake video API.
+Thu (day 3): Michael Cohen's Managed Agents session. Immediately after, define Producer + Shot Judge as Managed Agents. Wire up manifest read/write. First real video API integration.
+Fri (day 4): Audio Agent + Editor Agent. First end-to-end run on a 15-second test film.
+Sat (day 5): First full 30-second film run. Debugging. This is where most of your time goes — budget accordingly.
+Sun (day 6): Final run. Record demo video. Write submission. Submit by 8 PM EST.
+Mon (day 7): Async judging happens. You rest.
+Tue April 28, noon EST: Final round if you advance.
+The single biggest risk isn't code — it's the demo video. Budget at least a full afternoon for it on Sunday. Judges weight demo heavily and a rushed video undersells good work.
+Want me to draft the Discord question, or start on the manifest schema?
+
+
+---
+
+draft the Discord question
+
+
+---
+
+Discord question
+Short version (recommended):
+Quick clarification on the "start from scratch" rule: I have a prior personal project with a similar concept (AI-assisted video pipeline) where I manually crafted a 90-second film in Final Cut Pro. For the hackathon I'm building a fundamentally different system — fresh repo, multi-agent architecture with Managed Agents, fully automated pipeline. Is it fine to (a) use that prior film as a benchmark/reference in my demo video, and (b) mention the prior manual experimentation in my write-up as context? No code or assets from the old project will be in the submission. Thanks!
+Longer version if you want to over-disclose:
+Hey — want to confirm I'm reading the "start from scratch" rule correctly before I commit the week.
+Context: I have a prior personal project in the same problem space (AI video pipeline) where I manually produced a 90-second film — did the shot generation with scripts, then assembled/layered/upscaled in Final Cut Pro by hand. There's a repo with that older code.
+For the hackathon I'm building something architecturally different: multi-agent pipeline with a Producer orchestrator, Shot Judge, Audio, and Editor agents on Managed Agents, shared shot manifest, fully automated end-to-end including FCPXML generation. Fresh repo, code written this week.
+Want to confirm these are all fine:
+The hackathon repo is net-new code — no copy-paste from the prior repo, only conceptual learnings.
+Using the prior manual film as a benchmark in the demo ("previously took me hours manually, here's the pipeline doing it autonomously").
+Mentioning in the write-up that the idea is informed by prior manual experimentation.
+If any of these cross a line, happy to adjust. Thanks!
+I'd go with the short version. Office hours staff are answering many questions; the shorter one is easier to give a clean yes/no to and covers the same ground. Post in the office hours channel between 5–6 PM EST so a Claude Code team member sees it, rather than the general questions channel.
+One tactical note: if you don't get a response in office hours, post the same question in the general questions channel afterward — the asynchronous reviewers may see it there. Either way, screenshot the answer you get. If there's any dispute later about interpretation, having an organizer's written "yes, that's fine" removes all ambiguity.
+
+
+---
+
+what will you improve on this Claude.md
+what will be the manifest schema like?
+
+
+---
+
+Two parts: critique of the CLAUDE.md, then the manifest schema.
+Part 1 — CLAUDE.md improvements
+The doc is already well-structured. Rare to see hackathon context files this clean. Specific improvements below, organized by what matters most.
+Critical gaps (add these)
+1. Hackathon compliance front-matter. The "start from scratch" rule is your biggest risk. Make the compliance posture explicit at the top so Claude Code doesn't accidentally suggest reusing prior work:
+
+markdown
+## Compliance
+- All code in this repo is written during April 21–28, 2026.
+- No code, assets, or fixtures from prior personal projects are imported.
+- Prior manual experimentation with a similar concept informs design but
+  contributes zero lines to this repo.
+- When in doubt about whether something counts as "reuse," Claude should
+  flag it rather than assume.
+2. Managed Agents section is missing entirely. This is your prize play and your CLAUDE.md doesn't mention it. The "Orchestration: Claude 4.7 via Claude Code" line undersells what you're doing. Add:
+
+markdown
+## Managed Agents architecture
+
+The pipeline uses Claude Managed Agents (research preview) for long-running
+work. Not everything is a Managed Agent — the rule is:
+
+- **Managed Agent**: multi-turn, file-ops, needs resumption across sessions.
+- **Plain Messages API**: single-turn text-in/text-out, no tool use.
+- **No LLM**: pure API polling/workers.
+
+Agents defined:
+- `producer` — orchestrator, owns manifest, invokes specialists
+- `shot_judge` — vision QC per shot, writes structured feedback
+- `audio_agent` — ElevenLabs pipeline, timing reconciliation
+- `editor_agent` — FCPXML generation with Outcomes-driven validation
+
+Plain API: screenwriter, prompt_smith.
+Workers (no LLM): renderer, ffmpeg assembler.
+3. The Shot Manifest is implied but never specified. The whole pipeline's resumability depends on it. Add a link or inline the schema (see Part 2 below):
+
+markdown
+## Shot Manifest
+
+Single source of truth at `state/manifest.json`. See `docs/manifest-schema.md`.
+All agents read from and write to the manifest. No agent talks directly to
+another agent — coordination is always through manifest state transitions.
+Tensions to resolve
+4. SQLite vs. JSON manifest. You have state.generations table in SQLite and a forthcoming shot manifest. Which is authoritative for shot state? Decide and document:
+SQLite for append-only event log (every provider call, cost, latency)
+JSON manifest for current shot state (human-readable, diffable, demo-friendly)
+They should never disagree; SQLite is derivable from event stream
+If you don't resolve this early, Claude Code will write inconsistent code against both.
+5. "Claude 4.7 via Claude Code" is ambiguous. Do you mean:
+Claude Code CLI running Opus 4.7 as the dev tool you're using to build this, or
+Opus 4.7 as the runtime orchestrator for users of the deployed system?
+Both are true here but they're different concerns. Split them:
+
+markdown
+## Build-time vs. run-time Claude
+
+- **Build-time**: Claude Code CLI (Opus 4.7, auto mode permissions) — the
+  tool *I* use to write this codebase.
+- **Run-time**: Managed Agents (Opus 4.7) — the orchestrator *users* invoke
+  when they run the pipeline.
+Smaller improvements
+6. Daily targets are too code-focused. No time allocated for the 3-minute demo video, which is the highest-weighted judging criterion after impact. Add explicit video budget to Day 6 and Day 7:
+
+markdown
+- **Day 6 (Sun)**: End-to-end polish AM. Demo film generation PM.
+  Demo video recording evening (3–4 hours minimum).
+  **SUBMISSION DUE 8 PM EST.**
+- **Day 7 (Mon)**: Async judging happens. Rest.
+- **Day 8 (Tue, Apr 28)**: Final round at noon EST if advanced.
+Note: your current CLAUDE.md says submission is Monday but the transcript says Sunday April 26, 8 PM EST. Fix this — it's a hard deadline.
+7. Provider list needs a decision column. You list providers but not which one is the primary path. For the demo you need one working golden path, with fallbacks as bonus. Add:
+
+markdown
+## Provider priority for v1
+
+- **Primary path (must work end-to-end)**: Veo 3.1 Fast for non-human shots,
+  Kling via fal.ai for human shots, ElevenLabs for all audio.
+- **Secondary (nice to have)**: Runway Gen-4, Wan 2.5 for cheap iteration.
+- **Do not integrate in hackathon week**: Imagen 4 (unless needed for
+  reference images), LTX, Seedance, Qwen-Image.
+Without this, Claude Code will happily wire up all 10 providers and you'll run out of time.
+8. Router is called "core IP" but lightly specified. If tests-for-router-decisions are the core IP, the CLAUDE.md should describe what a "router decision" actually is — inputs, outputs, decision factors. Otherwise Claude Code will invent a schema. Add:
+
+markdown
+## Router decision contract
+
+Input: ShotSpec (content_type, has_humans, motion_level, duration_s,
+  budget_remaining_usd, prior_failures)
+Output: ProviderChoice (provider_id, model_id, estimated_cost_usd, rationale)
+Decision factors, in priority order:
+  1. Hard capability match (e.g. Veo can't do humans from EU)
+  2. Prior failures in this session (don't retry provider that just failed)
+  3. Cost vs. remaining budget
+  4. Quality preference from capabilities.yaml
+Tests must cover each factor in isolation.
+9. Missing "how to run the demo without live APIs." You mention demo/fixtures/ but not how fixtures get generated or swapped in. Add a one-liner:
+
+markdown
+## Demo mode
+
+`DEMO_MODE=1` makes all provider adapters read from `demo/fixtures/` instead
+of calling live APIs. Generated during Day 6 recording; required for the
+demo video so you're not at the mercy of API latency.
+This matters because your demo video recording will fail badly if a Veo call takes 4 minutes mid-recording.
+10. HACKATHON_LOG.md mentioned but no template. Add a link or inline template so Claude Code initializes it on day 1. Otherwise you'll forget to write in it.
+What to keep as-is
+The Non-goals section is excellent — kills scope creep conversations with Claude Code before they start. Leave it.
+The architectural rules (versioned artifacts, declarative router, uniform provider interface, failures first-class, reproducible demo) are the strongest part of the doc. Don't touch them.
+Part 2 — Shot Manifest schema
+Design principles:
+Append-only history inside each shot. Never mutate prior states; push to history array. Makes resumption trivial.
+Status is a state machine, not a free-text field. Enum only.
+Separate user-authored fields from agent-authored fields. Prevents accidental clobbering.
+File paths are relative to project root. Portable across machines.
+Cost, latency, provider recorded per generation attempt. Feeds router learning.
+Top-level structure
+
+json
+{
+  "manifest_version": "1.0",
+  "project_id": "proj_2026_04_21_coastal_thriller",
+  "created_at": "2026-04-21T14:02:11Z",
+  "updated_at": "2026-04-21T18:44:03Z",
+  "brief": {
+    "logline": "A lighthouse keeper discovers a letter that shouldn't exist.",
+    "target_duration_s": 60,
+    "tone": ["moody", "minimal dialogue", "coastal noir"],
+    "genre": "thriller",
+    "source_path": "inputs/brief.md"
+  },
+  "script": {
+    "status": "approved",
+    "version": 2,
+    "path": "artifacts/script/v2.fountain",
+    "approved_by": "user",
+    "approved_at": "2026-04-21T15:10:44Z"
+  },
+  "shots": [ /* array of Shot objects — see below */ ],
+  "audio": {
+    "dialogue": [ /* per-line VO records */ ],
+    "music_path": "artifacts/audio/music.wav",
+    "sfx": [ /* sfx records */ ]
+  },
+  "edit": {
+    "fcpxml_path": "artifacts/edit/final.fcpxml",
+    "render_path": "artifacts/edit/final.mp4",
+    "total_duration_s": 58.4,
+    "status": "approved"
+  },
+  "budget": {
+    "cap_usd": 800.00,
+    "spent_usd": 142.37,
+    "by_provider": {
+      "vertex_veo_3_1_fast": 89.20,
+      "fal_kling": 38.17,
+      "elevenlabs": 15.00
+    }
+  },
+  "run_state": {
+    "current_stage": "make",
+    "last_event_id": 247,
+    "resumable": true
+  }
+}
+Shot object (the core unit)
+
+json
+{
+  "shot_id": "sh_003",
+  "scene": 1,
+  "order": 3,
+  "description": "Wide establishing — coastal cliffs at dawn, lighthouse silhouette.",
+  "duration_s": 4.2,
+  "has_humans": false,
+  "motion_level": "low",
+  "continuity_refs": ["sh_002", "sh_004"],
+
+  "prompt": {
+    "authored_by": "prompt_smith",
+    "primary": "A wide establishing shot of rugged coastal cliffs at dawn...",
+    "negative": "no modern buildings, no people",
+    "reference_image_paths": ["artifacts/refs/dawn_lighthouse.png"]
+  },
+
+  "routing": {
+    "chosen_provider": "vertex_veo_3_1_fast",
+    "chosen_model": "veo-3.1-fast",
+    "rationale": "No humans, low motion, low cost preference",
+    "decided_by": "router",
+    "decided_at": "2026-04-21T16:02:11Z",
+    "alternates": ["fal_kling_2_1", "fal_runway_gen4"]
+  },
+
+  "attempts": [
+    {
+      "attempt_id": 1,
+      "provider": "vertex_veo_3_1_fast",
+      "started_at": "2026-04-21T16:02:30Z",
+      "completed_at": "2026-04-21T16:03:47Z",
+      "cost_usd": 0.42,
+      "latency_s": 77,
+      "render_path": "artifacts/renders/sh_003/v1.mp4",
+      "judge_score": 0.58,
+      "judge_notes": "Composition good, but sky over-exposed; lighthouse clipped.",
+      "outcome": "rejected",
+      "rejection_reason": "auto_judge"
+    },
+    {
+      "attempt_id": 2,
+      "provider": "vertex_veo_3_1_fast",
+      "prompt_revision": "Added 'soft overcast dawn light, full lighthouse in frame'",
+      "started_at": "2026-04-21T16:04:10Z",
+      "completed_at": "2026-04-21T16:05:22Z",
+      "cost_usd": 0.42,
+      "latency_s": 72,
+      "render_path": "artifacts/renders/sh_003/v2.mp4",
+      "judge_score": 0.84,
+      "judge_notes": "Passes. Good continuity with sh_004.",
+      "outcome": "approved",
+      "approved_by": "auto_judge"
+    }
+  ],
+
+  "final": {
+    "render_path": "artifacts/renders/sh_003/v2.mp4",
+    "attempt_id": 2
+  },
+
+  "status": "approved",
+  "history": [
+    {"ts": "2026-04-21T15:58:00Z", "event": "created", "by": "screenwriter"},
+    {"ts": "2026-04-21T16:00:12Z", "event": "prompt_generated", "by": "prompt_smith"},
+    {"ts": "2026-04-21T16:02:11Z", "event": "routed", "by": "router"},
+    {"ts": "2026-04-21T16:03:47Z", "event": "rendered_v1", "by": "renderer"},
+    {"ts": "2026-04-21T16:04:00Z", "event": "judged_rejected", "by": "shot_judge"},
+    {"ts": "2026-04-21T16:05:22Z", "event": "rendered_v2", "by": "renderer"},
+    {"ts": "2026-04-21T16:05:45Z", "event": "judged_approved", "by": "shot_judge"}
+  ]
+}
+Status state machine
+
+created → prompted → routed → rendering → judging → approved
+                                    │         │
+                                    │         └─→ rejected → rendering (retry)
+                                    │                     └─→ escalated (user)
+                                    └─→ failed → routed (fallback provider)
+Document this in docs/manifest-schema.md. Every agent reads the current status and only acts on valid transitions. Invalid transition attempts log to run_state for debugging.
+Why these shapes specifically
+attempts as array (not latest-only): the whole point is to see the revision history in the demo video. Also lets the router learn ("last time Veo failed on dawn lighting, try Kling first next time").
+continuity_refs on each shot: Shot Judge reads these to check against neighbors. Without this field the Judge has no cheap way to know "what should shot 4 look continuous with."
+routing.alternates pre-computed: if the first provider fails catastrophically, the Producer already has a fallback list without re-invoking the router. Latency win.
+budget.by_provider: lets the router refuse expensive providers when near the cap. Enforces your $800 ceiling as a first-class pipeline constraint, not an afterthought.
+run_state.resumable flag: the Producer sets this false during non-atomic operations, true when manifest is consistent. On restart, if resumable: false, Producer runs reconciliation before accepting new work.
+Validation
+Write a JSON Schema file (schemas/manifest.schema.json) and validate on every write. The Producer's system prompt should explicitly say: "Before writing the manifest, validate against the schema. If validation fails, do not write — surface the error."
+This is one of the stronger use-cases for the Outcomes feature — "write a manifest that validates against schema X" is a clean machine-checkable success criterion.
+Want me to draft the actual JSON Schema file next, or the Producer system prompt that enforces all this?
+
+
+---
+
+no, write another post with pictures of the 2 projects I worked the other side of the mirror and the archivist, film.giveago.co/films
+
+
+---
+
+Before I draft the post, I need to be careful here — you've given me two project names (The Other Side of the Mirror and The Archivist) and a URL, but I don't want to fabricate details about either film. A few honest questions first:
+
+
+---
+
+Q: Are both films live at film.giveago.co/films right now?
+A: Yes — both films are there, grab stills/details from the site
+Q: What's the post's main job?
+A: Behind-the-scenes / process reflection, hackathon mentioned secondarily
+
+
+---
+
+Let me grab the actual details from the site so I write from facts, not guesses.
+
+Reconciled data limitations with narrative opportunity, prioritized honesty
+Reconciled data limitations with narrative opportunity, prioritized honesty
+Quick honesty note before drafting: I found the Give(a)Go site but the /films path redirects to the event page — I couldn't actually pull stills or per-film descriptions for The Other Side of the Mirror or The Archivist. And the search results for "The Archivist" kept surfacing unrelated films from other directors, so I'm not going to invent details about yours.
+Two things that would sharpen the post — either give me the details now, or I'll draft with placeholders you fill in:
+A one-line description of each film (tone, theme, or the logline)
+Whether both were made at the Give(a)Go Ireland AI Filmmaking Hackathon on April 18–19 (this would be a killer narrative — "just came out of a 24-hour AI film hackathon, now a week-long one to build the pipeline I wish I'd had")
+Here are drafts with bracketed placeholders. The images you attach in LinkedIn yourself — I'm just writing the text.
+
+A
+Bridge: last week's films → this week's pipeline
+
+B
+Long-form: show the pain, announce the fix
+
+C
+Two acts framing
+
+
+
+
+Three angles:
+Bridge — cleanest narrative, one-line placeholders to fill in for each film
+Long-form — the strongest hook (shows concrete pain points, makes the pipeline project obviously necessary) but longer; LinkedIn rewards this when it's this specific
+Two acts — most elegant structurally, shortest, leaves room for the images to carry the weight
+A few notes:
+I assumed both films were at Give(a)Go Apr 18–19 based on the site redirect and your mention of "the other side of the mirror and the archivist" alongside that URL. If that's wrong tell me and I'll rewrite.
+Replace @ mentions with real LinkedIn tags when posting — they're plain text here.
+For the images: 1 still per film side by side works well on LinkedIn, or a 4-up grid if you have production BTS shots. LinkedIn downweights posts with external links in the body — if engagement matters, consider putting film.giveago.co/films in the first comment instead of the post body.
+The long-form version's list of four pain points is the most differentiating content in any of these drafts. If you go with Bridge or Two Acts, consider keeping that list somewhere — it's the part that proves you actually did the work, not just watched a YouTube demo.
+
+
+---
+
+The Archivist
+When the world ends, we do not reach for what is valuable. We reach for what is known.
+The Other Side of the Mirror
+A bride embraces her light and dark stuff on her wedding day.
+
+
+---
+
+Good — with real loglines the posts get sharper. Here are revised versions.
+
+A
+Bridge — films → pipeline
+
+B
+Long-form — show the pain
+
+C
+Two acts
+
+
+
+
+Two small notes on the loglines themselves:
+The Archivist logline is genuinely striking. "Reach for what is known, not what is valuable" is a sharp idea and carries weight on its own — no polish needed.
+The Other Side of the Mirror I softened very slightly ("her light and dark stuff" → "her light and dark") — "stuff" reads colloquial in a LinkedIn post. If you'd rather keep your exact phrasing, use "light and dark sides" or put it back as you wrote it. The loglines are yours; I'll match whatever you want.
+My pick: Long-form. The pain-point list is the most valuable content in any of these drafts — it's specific, it proves you actually did the work, and it makes the pipeline project feel inevitable rather than arbitrary. On LinkedIn, specificity beats brevity when you have real substance.
+One tactical reminder: the film.giveago.co/films URL redirects to the event homepage right now, not a films listing. If you want the link to land people directly on the films, confirm the URL resolves correctly before posting, or use whatever direct film URLs you have.
+
+
+---
+
+reply from anthropic Use of other OSS libraries in your project is allowed, just like using 3rd party APIs (like ElevenLabs for audio for example). What's not allowed is for example forking vllm and building vllm2 for the hackathon. The project should be new original work.
+
+
+---
+
+Clear, actionable answer from Anthropic. Let's translate it into concrete rules for your project.
+What this confirms
+Allowed:
+Using OSS libraries (FastAPI, Next.js, shadcn, ffmpeg, pydantic, SQLAlchemy, any pip/npm package)
+Using third-party APIs (Veo, fal.ai, ElevenLabs, etc.)
+Applying knowledge, patterns, and lessons from prior work
+Bringing your own design sensibility and architectural taste
+Not allowed:
+Forking an existing project and calling the delta your submission
+Making the submission materially derivative of a prior codebase you own
+The test: is the project itself new original work? Yes → fine. Are you wrapping/extending something pre-existing as the core of the submission? No.
+What this means for your situation
+Your prior Give(a)Go project was almost entirely manual work in Final Cut Pro, with some scripts around generation. The hackathon project is a multi-agent orchestrated pipeline with Managed Agents. These are genuinely different systems — the overlap is in domain knowledge (which providers handle which shots, what prompt patterns work for Veo vs. Kling), not in code.
+Domain knowledge isn't a codebase. You're fine.
+Concrete rules to add to your CLAUDE.md
+Replace the compliance section I drafted earlier with this version, which reflects Anthropic's actual answer:
+
+markdown
+## Compliance
+
+Per Anthropic clarification (Discord office hours, Apr 21):
+- OSS libraries and third-party APIs are fine (ElevenLabs, Veo, fal.ai, etc.)
+- The project itself must be new original work — no forking a prior
+  project and presenting the delta as the submission.
+
+Rules for this repo:
+- No files copied from prior personal projects.
+- No vendoring of my own prior code as a dependency.
+- Knowledge transfer is fine: which provider handles humans best, prompt
+  patterns that worked before, architectural lessons learned.
+- When adding a dependency, it should be a genuinely third-party library
+  (from PyPI/npm) or a fresh implementation — not a rebranded prior
+  module of mine.
+What you can now do without hesitation
+Use any pip/npm package freely. No need to implement FCPXML generation from scratch if a library exists; no need to reimplement an ElevenLabs client.
+Bring your provider knowledge directly — the router/capabilities.yaml file encoding what Veo does well vs. Kling is domain knowledge, not reused code. Write it fresh, informed by what you learned.
+Reference your prior films as benchmarks in the demo video. Show the comparison.
+In the write-up, position the prior work as motivation: "I spent 24 hours last weekend doing X manually; this week I built the pipeline that automates X."
+What to still avoid
+Don't cp old_project/providers/veo.py new_project/providers/veo.py. Write the adapter fresh.
+Don't import your old project as a git submodule or local pip install.
+Don't reuse your prior project's prompt templates verbatim if they live in a file. Retype them, revise them — they'll be better anyway since you've learned since.
+Tactical: screenshot the Discord reply
+Save the response in your notes. If there's any question later in judging, you have Anthropic's own clarification in writing. This also means you can stop second-guessing and get on with building.
+You've burned a good chunk of day 1 on planning and compliance checking — both worthwhile, but the ROI on more planning is dropping. Want me to draft the repo scaffold next (directory structure, initial CLAUDE.md with the updates we discussed, manifest schema file), or jump to the Producer system prompt so you can actually start building?
+
+
+---
+
+I can handle this to Claude code, I will only need the memory of this chat, I got the 500 dollars in credits, all will be commanded in vscode
+
+
+---
+
+Smart move — let Claude Code handle the build, you stay in the strategic/review seat.
+What to hand off to Claude Code
+Since you're moving to VSCode, the handoff is essentially: everything we discussed, turned into files Claude Code can read on every invocation. The critical ones:
+1. CLAUDE.md (repo root)
+Your existing draft + the improvements we discussed. Key additions:
+Compliance section with Anthropic's Discord clarification
+Managed Agents architecture section (the tiering — Tier 1 Producer, Tier 2 specialists, Tier 3 plain API, Tier 4 workers)
+Shot manifest reference (pointing to docs/manifest-schema.md)
+Build-time vs. run-time Claude distinction
+Provider priority (primary: Veo 3.1 Fast + Kling via fal + ElevenLabs; secondary later)
+Corrected deadline: Sunday April 26, 8 PM EST (your doc had Monday)
+Demo mode with DEMO_MODE=1 fixture replay
+Budget: $500 Anthropic credits + whatever you've allocated for video APIs separately
+2. docs/manifest-schema.md
+The schema we drafted — top-level structure, shot object, state machine. Include the JSON Schema file at schemas/manifest.schema.json so the Producer can validate on every write.
+3. docs/agents.md
+Per-agent specs: model, system prompt outline, tools, environment config, outcomes criteria, invocation pattern. One section per agent (Producer, Shot Judge, Audio, Editor, Screenwriter, PromptSmith, Renderer).
+4. HACKATHON_LOG.md
+Initialize empty with a template. Claude Code appends daily notes. This feeds your demo video script on Sunday.
+5. router/capabilities.yaml
+Declarative provider capabilities — the core IP per your own rules. Leave this for Claude Code to populate based on your knowledge, but seed it with the structure.
+Budget note — important
+The $500 is Anthropic credits only. That covers Opus 4.7 orchestration calls, but not Veo, fal.ai, ElevenLabs. Based on your CLAUDE.md's $800 total budget, you'd planned for that — just confirming you haven't lost sight of it. A single 60-second film with 3 takes per shot across 15 shots on Veo 3.1 Fast plus Kling fallbacks plus ElevenLabs dialogue could run $60–150 easily.
+Specifically: keep Opus 4.7 orchestration on max plan if you have it, or stretch the $500 with aggressive prompt caching. Managed Agents caches aggressively by default but you break the cache when you change the skills list or system prompt — document a "stable config" once you land on it and don't edit trivially.
+One thing I'd recommend doing before closing this chat
+Export or screenshot the key artifacts from this conversation:
+The system design (tiered architecture, agent responsibilities)
+The manifest schema (top-level + shot object + state machine)
+The managed agents decomposition (which agents, why each tier, invocation patterns)
+Anthropic's Discord reply on compliance
+Dump these into the repo as markdown files Claude Code can reference. Claude Code has no memory of this chat — it only sees what's in your repo. If the files aren't there, the context isn't there.
+Tactical suggestion for Claude Code in VSCode
+Start the first session with a plan-mode prompt: "Read CLAUDE.md, docs/manifest-schema.md, and docs/agents.md. Draft a day-1 task list matching the daily targets in CLAUDE.md. Don't write any code yet." Let it surface the plan before building.
+Use /loop for babysitting tasks Boris mentioned — the router test suite is a perfect candidate ("whenever I push, re-run router tests and fix any regressions").
+Enable auto mode (shift+tab x3) once you trust the setup. Don't use dangerous mode.
+Keep HACKATHON_LOG.md updated by Claude Code at the end of each session — literally prompt it "append today's progress to HACKATHON_LOG.md" before stopping.
+Good luck
+You've done the hard part of the first day — the thinking. The plan is sound, the compliance is cleared, the architecture is specific enough that Claude Code can execute against it without drift.
+One last thing: on Sunday, stop building by 4 PM EST at the latest and spend the remaining 4 hours on the demo video. The demo is weighted heavily. A great pipeline with a rushed demo loses to a good pipeline with a great demo. Screen recording, voice-over, the before/after comparison with your Give(a)Go films, the kill-and-resume demonstration — all of that needs real time.
+Ship it.

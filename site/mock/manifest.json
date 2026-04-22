@@ -1,0 +1,419 @@
+{
+  "manifest_version": "1.0",
+  "project_id": "proj_earth_day_doors_2026",
+  "created_at": "2026-04-22T10:00:00Z",
+  "updated_at": "2026-04-26T15:30:00Z",
+
+  "brief": {
+    "logline": "Magic doors appear in cities worldwide. Each leads somewhere surprising.",
+    "target_duration_s": 60,
+    "tone": ["magical realism", "dreamlike", "grounded"],
+    "genre": "short film",
+    "source_path": "inputs/brief.md",
+    "artistic_style": "golden-hour photography, shallow depth of field, handheld but calm",
+    "allow_artistic_experiments": false
+  },
+
+  "script": {
+    "status": "approved",
+    "version": 2,
+    "path": "artifacts/script/v2.md",
+    "approved_by": "producer",
+    "approved_at": "2026-04-22T11:12:00Z"
+  },
+
+  "shots": [
+    {
+      "shot_id": "sh_001",
+      "scene": 1,
+      "order": 1,
+      "description": "Wide establishing: Shibuya crossing at golden hour, crowds, neon reflections on wet asphalt.",
+      "duration_s": 8.0,
+      "has_humans": true,
+      "is_hero": false,
+      "motion_level": "high",
+      "continuity_refs": [],
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "primary": "Wide cinematic establishing shot of Shibuya crossing at golden hour. Crowds cross the intersection in soft motion blur. Neon signage reflects on wet asphalt. Handheld but calm, 35mm, shallow depth of field. Warm tones, film grain.",
+        "negative": "plastic skin, warped faces, text artifacts",
+        "start_frame_path": "inputs/refs/location/shibuya_goldenhour.jpg"
+      },
+      "routing": {
+        "chosen_provider": "fal_kling_2_1_pro",
+        "chosen_model": "kling-video/v2.1/pro/image-to-video",
+        "rationale": "Human subjects in frame. Motion complexity high. Pro tier selected; Standard deprioritized by rule.",
+        "decided_by": "router",
+        "decided_at": "2026-04-22T11:40:00Z",
+        "alternates": ["alibaba_wan_2_7_plus"]
+      },
+      "attempts": [
+        {
+          "attempt_id": 1,
+          "provider": "fal_kling_2_1_pro",
+          "started_at": "2026-04-22T11:41:00Z",
+          "completed_at": "2026-04-22T11:46:17Z",
+          "cost_usd": 0.72,
+          "latency_s": 317,
+          "render_path": "artifacts/renders/sh_001_a1.mp4",
+          "judge_score": 0.88,
+          "judge_notes": "Establishing scale reads. Crowd motion natural. No face artifacts at this distance.",
+          "outcome": "approved",
+          "approved_by": "shot_judge"
+        }
+      ],
+      "final": {
+        "render_path": "artifacts/renders/sh_001_a1.mp4",
+        "attempt_id": 1
+      },
+      "status": "approved",
+      "history": [
+        {"ts": "2026-04-22T11:12:30Z", "event": "created", "by": "screenwriter"},
+        {"ts": "2026-04-22T11:25:00Z", "event": "prompted", "by": "prompt_smith"},
+        {"ts": "2026-04-22T11:40:00Z", "event": "routed", "by": "router", "detail": "fal_kling_2_1_pro"},
+        {"ts": "2026-04-22T11:41:00Z", "event": "rendering", "by": "renderer"},
+        {"ts": "2026-04-22T11:46:17Z", "event": "judging", "by": "renderer"},
+        {"ts": "2026-04-22T11:46:45Z", "event": "approved", "by": "shot_judge"}
+      ],
+      "judge_feedback": [],
+      "creative_feedback": [],
+      "artistic_direction": "Establish the city as an ordinary place before anything magical happens."
+    },
+
+    {
+      "shot_id": "sh_002",
+      "scene": 1,
+      "order": 2,
+      "description": "A wooden door appears at the crossing, out of place against neon.",
+      "duration_s": 5.0,
+      "has_humans": false,
+      "is_hero": false,
+      "motion_level": "low",
+      "continuity_refs": ["sh_001"],
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "primary": "A plain wooden door stands alone in the middle of Shibuya crossing. The door is still. The world moves around it in slow motion. Warm late-afternoon light rakes across the grain. 35mm film look.",
+        "negative": "ornate carvings, fantasy elements, glow effects",
+        "start_frame_path": "inputs/refs/doors/wooden_door.jpg",
+        "reference_image_paths": ["inputs/refs/location/shibuya_goldenhour.jpg"]
+      },
+      "routing": {
+        "chosen_provider": "alibaba_wan_2_7_plus",
+        "chosen_model": "wan-2.7-plus",
+        "rationale": "No humans. Low motion. Free-quota workhorse selected over paid tiers.",
+        "decided_by": "router",
+        "decided_at": "2026-04-22T12:01:00Z",
+        "alternates": ["fal_kling_2_1_standard"]
+      },
+      "attempts": [
+        {
+          "attempt_id": 1,
+          "provider": "alibaba_wan_2_7_turbo",
+          "started_at": "2026-04-22T12:02:00Z",
+          "completed_at": "2026-04-22T12:03:10Z",
+          "cost_usd": 0.0,
+          "latency_s": 70,
+          "render_path": "artifacts/renders/sh_002_a1.mp4",
+          "judge_score": 0.54,
+          "judge_notes": "Door geometry warps at 3s. Background pedestrians ghost. Turbo-tier fidelity insufficient for final.",
+          "outcome": "rejected",
+          "rejection_reason": "artifact"
+        },
+        {
+          "attempt_id": 2,
+          "provider": "alibaba_wan_2_7_plus",
+          "started_at": "2026-04-22T12:05:00Z",
+          "completed_at": "2026-04-22T12:08:42Z",
+          "cost_usd": 0.0,
+          "latency_s": 222,
+          "render_path": "artifacts/renders/sh_002_a2.mp4",
+          "judge_score": 0.86,
+          "judge_notes": "Door stable. Background pedestrians natural. Good tonal match to sh_001.",
+          "outcome": "approved",
+          "approved_by": "shot_judge"
+        }
+      ],
+      "final": {
+        "render_path": "artifacts/renders/sh_002_a2.mp4",
+        "attempt_id": 2
+      },
+      "status": "approved",
+      "history": [
+        {"ts": "2026-04-22T11:25:00Z", "event": "created", "by": "screenwriter"},
+        {"ts": "2026-04-22T11:48:00Z", "event": "prompted", "by": "prompt_smith"},
+        {"ts": "2026-04-22T12:01:00Z", "event": "routed", "by": "router", "detail": "alibaba_wan_2_7_plus"},
+        {"ts": "2026-04-22T12:02:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 1 via wan turbo"},
+        {"ts": "2026-04-22T12:04:00Z", "event": "rejected", "by": "shot_judge", "detail": "artifact; escalate to plus"},
+        {"ts": "2026-04-22T12:05:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 2 via wan plus"},
+        {"ts": "2026-04-22T12:09:15Z", "event": "approved", "by": "shot_judge"}
+      ],
+      "judge_feedback": [
+        {
+          "ts": "2026-04-22T12:04:00Z",
+          "feedback_type": "artifact",
+          "severity": "critical",
+          "observation": "Door geometry warps at 3s on Wan Turbo attempt 1.",
+          "suggestion": "Escalate to Wan Plus for final render.",
+          "from_agent": "shot_judge"
+        }
+      ],
+      "creative_feedback": [],
+      "artistic_direction": "The door should feel ordinary, not magical. It is just there."
+    },
+
+    {
+      "shot_id": "sh_005",
+      "scene": 2,
+      "order": 5,
+      "description": "Hero shot: the door opens onto a glacier in blue-hour light. The reveal.",
+      "duration_s": 7.0,
+      "has_humans": false,
+      "is_hero": true,
+      "motion_level": "medium",
+      "continuity_refs": ["sh_002"],
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "primary": "Slow dolly toward a wooden door that opens onto a vast glacier under blue-hour sky. Breath of cold air escapes the threshold. Pristine ice, distant mountains, no people. Cinematic anamorphic, natural light.",
+        "negative": "warped geometry, cartoonish ice, snow globe",
+        "start_frame_path": "inputs/refs/locations/glacier.jpg"
+      },
+      "routing": {
+        "chosen_provider": "vertex_veo_3_1_fast",
+        "chosen_model": "veo-3.1-fast",
+        "rationale": "Hero shot, no humans, requires photographic fidelity for reveal moment. Veo selected within hero budget. No humans → EU restriction not triggered.",
+        "decided_by": "router",
+        "decided_at": "2026-04-23T09:14:00Z",
+        "alternates": ["fal_kling_2_1_pro"]
+      },
+      "attempts": [
+        {
+          "attempt_id": 1,
+          "provider": "vertex_veo_3_1_fast",
+          "started_at": "2026-04-23T09:15:00Z",
+          "completed_at": "2026-04-23T09:19:32Z",
+          "cost_usd": 3.20,
+          "latency_s": 272,
+          "render_path": "artifacts/renders/sh_005_a1.mp4",
+          "judge_score": 0.94,
+          "judge_notes": "Hero moment lands. Light transition from interior to glacier reads in-camera. No seams at door threshold.",
+          "outcome": "approved",
+          "approved_by": "shot_judge"
+        }
+      ],
+      "final": {
+        "render_path": "artifacts/renders/sh_005_a1.mp4",
+        "attempt_id": 1
+      },
+      "status": "approved",
+      "history": [
+        {"ts": "2026-04-23T08:40:00Z", "event": "created", "by": "screenwriter"},
+        {"ts": "2026-04-23T09:02:00Z", "event": "prompted", "by": "prompt_smith"},
+        {"ts": "2026-04-23T09:14:00Z", "event": "routed", "by": "router", "detail": "vertex_veo_3_1_fast"},
+        {"ts": "2026-04-23T09:15:00Z", "event": "rendering", "by": "renderer"},
+        {"ts": "2026-04-23T09:19:32Z", "event": "judging", "by": "renderer"},
+        {"ts": "2026-04-23T09:20:05Z", "event": "approved", "by": "shot_judge"}
+      ],
+      "judge_feedback": [],
+      "creative_feedback": [
+        {
+          "ts": "2026-04-23T08:55:00Z",
+          "from_agent": "creative_director",
+          "feedback": "This is the emotional center of the film. Protect the reveal — no cuts in the middle, no dialogue over it.",
+          "suggestion": "Lock duration at 7s and hold VO to post-reveal only.",
+          "priority": "high",
+          "addressed": true,
+          "addressed_by": "producer locked sh_005 duration at 7s and excluded VO overlap",
+          "addressed_at": "2026-04-23T09:00:00Z"
+        }
+      ],
+      "artistic_direction": "Slow. Let the cold air do the work. No music stab."
+    },
+
+    {
+      "shot_id": "sh_007",
+      "scene": 3,
+      "order": 7,
+      "description": "Wide hero: glacier scale, a small human figure at the edge for reference.",
+      "duration_s": 7.0,
+      "has_humans": true,
+      "is_hero": true,
+      "motion_level": "low",
+      "continuity_refs": ["sh_005"],
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "primary": "Wide aerial-adjacent shot of an ice field. A single human figure stands at the glacier edge, coat flapping in wind. Scale of ice dwarfs them. Cold blue light, real horizon, no fantasy.",
+        "negative": "CGI look, desaturated greys, video-game sky",
+        "start_frame_path": "inputs/refs/locations/glacier.jpg",
+        "reference_subject_paths": [
+          "inputs/refs/protagonist/wide.jpg",
+          "inputs/refs/protagonist/coat.jpg"
+        ]
+      },
+      "routing": {
+        "chosen_provider": "fal_kling_2_1_pro",
+        "chosen_model": "kling-video/v2.1/pro/image-to-video",
+        "rationale": "Hero shot BUT has_humans=true. Hard rule humans_never_veo forces Veo off-table. Two subject refs → prefer_kling_pro_when_refs_or_end_frame deprioritizes Standard. Kling Pro selected.",
+        "decided_by": "router",
+        "decided_at": "2026-04-24T13:02:00Z",
+        "alternates": ["fal_kling_2_1_standard"]
+      },
+      "attempts": [
+        {
+          "attempt_id": 1,
+          "provider": "fal_kling_2_1_pro",
+          "started_at": "2026-04-24T13:03:00Z",
+          "completed_at": "2026-04-24T13:07:14Z",
+          "cost_usd": 0.63,
+          "latency_s": 254,
+          "render_path": "artifacts/renders/sh_007_a1.mp4",
+          "judge_score": 0.48,
+          "judge_notes": "Figure floats above ice surface (no contact shadow). Ice texture repeats. Scale unconvincing.",
+          "outcome": "rejected",
+          "rejection_reason": "continuity"
+        },
+        {
+          "attempt_id": 2,
+          "provider": "fal_kling_2_1_pro",
+          "started_at": "2026-04-24T13:10:00Z",
+          "completed_at": "2026-04-24T13:14:41Z",
+          "cost_usd": 0.63,
+          "latency_s": 281,
+          "render_path": "artifacts/renders/sh_007_a2.mp4",
+          "judge_score": 0.61,
+          "judge_notes": "Figure grounded. Ice texture improved. Still reads slightly small-scale. Marginal.",
+          "outcome": "rejected",
+          "rejection_reason": "artifact"
+        }
+      ],
+      "status": "escalated",
+      "history": [
+        {"ts": "2026-04-24T12:40:00Z", "event": "created", "by": "screenwriter"},
+        {"ts": "2026-04-24T12:55:00Z", "event": "prompted", "by": "prompt_smith"},
+        {"ts": "2026-04-24T13:02:00Z", "event": "routed", "by": "router", "detail": "fal_kling_2_1_pro"},
+        {"ts": "2026-04-24T13:03:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 1"},
+        {"ts": "2026-04-24T13:08:00Z", "event": "rejected", "by": "shot_judge", "detail": "no contact shadow"},
+        {"ts": "2026-04-24T13:10:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 2"},
+        {"ts": "2026-04-24T13:15:20Z", "event": "escalated", "by": "producer", "detail": "two rejects; defer crop to editor"}
+      ],
+      "judge_feedback": [
+        {
+          "ts": "2026-04-24T13:08:00Z",
+          "feedback_type": "continuity",
+          "severity": "critical",
+          "observation": "No contact shadow between figure and ice. Figure appears floating.",
+          "suggestion": "Re-render with grounded start frame, or crop wider in edit.",
+          "from_agent": "shot_judge"
+        },
+        {
+          "ts": "2026-04-24T13:15:00Z",
+          "feedback_type": "composition",
+          "severity": "warn",
+          "observation": "Figure grounded but scale reads small rather than epic.",
+          "suggestion": "Tighter framing or re-render with different reference.",
+          "from_agent": "shot_judge"
+        }
+      ],
+      "creative_feedback": [
+        {
+          "ts": "2026-04-24T13:16:00Z",
+          "from_agent": "creative_director",
+          "feedback": "Attempt 2 is marginal, not broken. Budget discipline argues against a third render.",
+          "suggestion": "Accept attempt 2 and let Editor crop wider in post to recover scale.",
+          "priority": "medium",
+          "addressed": true,
+          "addressed_by": "producer accepted attempt 2 as marginal final with editor crop note",
+          "addressed_at": "2026-04-24T13:17:00Z"
+        }
+      ],
+      "artistic_direction": "Scale is the point. Human must read small.",
+      "budget_decision": {
+        "trigger": "Two Kling Pro attempts consumed $1.26 with marginal results.",
+        "original_plan": "Iterate until judge_score > 0.8.",
+        "creative_pivot": "Accept attempt 2 as final; Editor crops wider to amplify scale.",
+        "rationale": "Third attempt low-probability of resolving scale issue; editor-side crop recovers the intent.",
+        "decided_at": "2026-04-24T13:17:00Z",
+        "decided_by": "producer"
+      }
+    }
+  ],
+
+  "audio": {
+    "dialogue": [
+      {
+        "shot_id": "sh_007",
+        "line_id": "vo_01",
+        "text": "Earth. Closer than you think.",
+        "voice_id": "el_voice_21df",
+        "audio_path": "artifacts/audio/vo_01.mp3",
+        "duration_s": 3.2,
+        "timing": { "in_s": 55.8, "out_s": 59.0 },
+        "compressibility_s": 0.2
+      }
+    ],
+    "sfx": [
+      {
+        "shot_id": "sh_005",
+        "sfx_id": "sfx_wind_glacier",
+        "description": "cold wind across ice field",
+        "audio_path": "artifacts/audio/sfx_05.mp3"
+      },
+      {
+        "shot_id": "sh_002",
+        "sfx_id": "sfx_crossing_ambience",
+        "description": "muted Shibuya ambience, distant cars",
+        "audio_path": "artifacts/audio/sfx_02.mp3"
+      }
+    ]
+  },
+
+  "edit": {
+    "fcpxml_path": "artifacts/edit/final.fcpxml",
+    "fcpxml_version": "1.10",
+    "render_path": "artifacts/edit/final.mp4",
+    "total_duration_s": 60.0,
+    "status": "approved"
+  },
+
+  "budget": {
+    "cap_usd": 151.0,
+    "spent_usd": 5.81,
+    "by_provider": {
+      "vertex_veo_3_1_fast": 3.20,
+      "fal_kling_2_1_pro": 2.61,
+      "fal_kling_2_1_standard": 0.0,
+      "alibaba_wan_2_7_plus": 0.0,
+      "alibaba_wan_2_7_turbo": 0.0
+    },
+    "alibaba_quota_remaining": 42,
+    "elevenlabs_credits_remaining": 117423
+  },
+
+  "run_state": {
+    "current_stage": "done",
+    "last_event_id": 30,
+    "resumable": true
+  },
+
+  "creative_decisions": [
+    {
+      "ts": "2026-04-23T08:55:00Z",
+      "decision_type": "duration_adjust",
+      "trigger": "Creative Director identified sh_005 as emotional anchor and urged pacing protection.",
+      "action": "Locked sh_005 duration at 7s; excluded VO overlap.",
+      "affected_shots": ["sh_005"],
+      "rationale": "Protect the reveal — aligns with brief tone 'dreamlike' and the artistic anchor of quiet, deliberate pacing.",
+      "decided_by": "producer",
+      "source_feedback_refs": [{"shot_id": "sh_005", "feedback_index": 0}]
+    },
+    {
+      "ts": "2026-04-24T13:17:00Z",
+      "decision_type": "scope_change",
+      "trigger": "Two Kling Pro attempts on sh_007 produced marginal results; third attempt low probability of success.",
+      "action": "Accepted attempt 2 as marginal final; flagged editor crop to recover scale.",
+      "affected_shots": ["sh_007"],
+      "rationale": "Budget discipline plus editor-side recovery preserves the 'Earth feels vast' intent without burning a third render.",
+      "decided_by": "producer",
+      "source_feedback_refs": [{"shot_id": "sh_007", "feedback_index": 0}]
+    }
+  ]
+}

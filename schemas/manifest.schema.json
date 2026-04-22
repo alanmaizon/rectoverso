@@ -1,0 +1,470 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rectoverso.local/schemas/manifest.schema.json",
+  "title": "Shot Manifest",
+  "description": "Single source of truth for the rectoverso pipeline. See docs/manifest-schema.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "project_id",
+    "created_at",
+    "updated_at",
+    "brief",
+    "script",
+    "shots",
+    "audio",
+    "edit",
+    "budget",
+    "run_state",
+    "creative_decisions"
+  ],
+  "properties": {
+    "manifest_version": { "const": "1.0" },
+    "project_id": { "type": "string", "pattern": "^proj_[a-z0-9_]+$" },
+    "created_at": { "$ref": "#/$defs/iso8601Utc" },
+    "updated_at": { "$ref": "#/$defs/iso8601Utc" },
+    "brief": { "$ref": "#/$defs/brief" },
+    "script": { "$ref": "#/$defs/script" },
+    "shots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/shot" }
+    },
+    "audio": { "$ref": "#/$defs/audio" },
+    "edit": { "$ref": "#/$defs/edit" },
+    "budget": { "$ref": "#/$defs/budget" },
+    "run_state": { "$ref": "#/$defs/runState" },
+    "creative_decisions": {
+      "type": "array",
+      "description": "Append-only log of film-level creative pivots (reorders, merges, scope changes, style shifts). Shot-level decisions live in shots[].budget_decision.",
+      "items": { "$ref": "#/$defs/creativeDecision" }
+    }
+  },
+  "$defs": {
+    "iso8601Utc": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/|~)[^\\0]+$"
+    },
+    "shotId": {
+      "type": "string",
+      "pattern": "^sh_\\d{3}$"
+    },
+    "motionLevel": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logline", "target_duration_s", "tone", "genre", "source_path"],
+      "properties": {
+        "logline": { "type": "string", "minLength": 1 },
+        "target_duration_s": { "type": "number", "exclusiveMinimum": 0 },
+        "tone": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "genre": { "type": "string" },
+        "source_path": { "$ref": "#/$defs/relativePath" },
+        "artistic_style": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Tonal/visual anchor baked into every PromptSmith prompt and evaluated by Creative Director (e.g., 'film noir, low-key lighting, handheld'). Optional; if absent, tone + genre carry the anchor."
+        },
+        "allow_artistic_experiments": {
+          "type": "boolean",
+          "description": "When true, Producer may reinterpret failed shots creatively (e.g., style pivots on retry) rather than deterministic fallback. Default false."
+        }
+      }
+    },
+    "script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "version", "path"],
+      "properties": {
+        "status": { "enum": ["draft", "approved"] },
+        "version": { "type": "integer", "minimum": 1 },
+        "path": { "$ref": "#/$defs/relativePath" },
+        "approved_by": { "type": "string" },
+        "approved_at": { "$ref": "#/$defs/iso8601Utc" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+          "then": { "required": ["approved_by", "approved_at"] }
+        }
+      ]
+    },
+    "shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shot_id",
+        "scene",
+        "order",
+        "description",
+        "duration_s",
+        "has_humans",
+        "is_hero",
+        "motion_level",
+        "continuity_refs",
+        "prompt",
+        "routing",
+        "attempts",
+        "status",
+        "history",
+        "judge_feedback",
+        "creative_feedback"
+      ],
+      "properties": {
+        "shot_id": { "$ref": "#/$defs/shotId" },
+        "scene": { "type": "integer", "minimum": 1 },
+        "order": { "type": "integer", "minimum": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+        "has_humans": { "type": "boolean" },
+        "is_hero": { "type": "boolean" },
+        "motion_level": { "$ref": "#/$defs/motionLevel" },
+        "continuity_refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/shotId" }
+        },
+        "prompt": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authored_by", "primary"],
+          "properties": {
+            "authored_by": { "type": "string" },
+            "primary": { "type": "string", "minLength": 1 },
+            "negative": { "type": "string" },
+            "reference_image_paths": {
+              "description": "Flat, unlabeled reference images. Legacy/general-purpose. For I2V first-frame use start_frame_path; for I2V last-frame use end_frame_path; for subject-consistency refs use reference_subject_paths.",
+              "type": "array",
+              "items": { "$ref": "#/$defs/relativePath" }
+            },
+            "start_frame_path": {
+              "description": "I2V start frame (the 'image' the clip is conditioned on). Used by Kling image-to-video and Wan I2V mode. Optional.",
+              "$ref": "#/$defs/relativePath"
+            },
+            "end_frame_path": {
+              "description": "I2V end frame (tail image — Kling supports first+last frame interpolation via tail_image_url). Implies the clip must land on this frame. Optional; requires a provider with supports_first_last_frame=true.",
+              "$ref": "#/$defs/relativePath"
+            },
+            "reference_subject_paths": {
+              "description": "Subject-consistency reference images (Kling input_image_urls). Max 4. Use for keeping a character/object consistent across shots. Provider must support max_reference_images >= len(this).",
+              "type": "array",
+              "items": { "$ref": "#/$defs/relativePath" },
+              "maxItems": 4
+            }
+          }
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["chosen_provider", "chosen_model", "rationale", "decided_by", "decided_at", "alternates"],
+          "properties": {
+            "chosen_provider": { "type": "string" },
+            "chosen_model": { "type": "string" },
+            "rationale": { "type": "string" },
+            "decided_by": { "type": "string" },
+            "decided_at": { "$ref": "#/$defs/iso8601Utc" },
+            "alternates": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "attempts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attempt" }
+        },
+        "final": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["render_path", "attempt_id"],
+          "properties": {
+            "render_path": { "$ref": "#/$defs/relativePath" },
+            "attempt_id": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "status": {
+          "enum": [
+            "created",
+            "prompted",
+            "routed",
+            "rendering",
+            "judging",
+            "approved",
+            "rejected",
+            "escalated",
+            "failed"
+          ]
+        },
+        "history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/historyEntry" }
+        },
+        "judge_feedback": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/judgeFeedback" }
+        },
+        "creative_feedback": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/creativeFeedback" }
+        },
+        "artistic_direction": {
+          "type": "string",
+          "description": "Creative style/mood guidance for this shot (e.g., 'slow, deliberate motion' or 'film noir lighting')"
+        },
+        "budget_decision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "trigger": { "type": "string", "description": "What budget constraint triggered this decision" },
+            "original_plan": { "type": "string", "description": "What was planned before constraint" },
+            "creative_pivot": { "type": "string", "description": "What creative choice was made (e.g., merge shots, change style)" },
+            "rationale": { "type": "string", "description": "Why this pivot improves the film under constraint" },
+            "decided_at": { "$ref": "#/$defs/iso8601Utc" },
+            "decided_by": { "type": "string" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "approved" } }, "required": ["status"] },
+          "then": { "required": ["final"] }
+        }
+      ]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt_id", "provider", "started_at", "outcome"],
+      "properties": {
+        "attempt_id": { "type": "integer", "minimum": 1 },
+        "provider": { "type": "string" },
+        "started_at": { "$ref": "#/$defs/iso8601Utc" },
+        "completed_at": { "$ref": "#/$defs/iso8601Utc" },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "latency_s": { "type": "number", "minimum": 0 },
+        "render_path": { "$ref": "#/$defs/relativePath" },
+        "prompt_revision": { "type": "string" },
+        "judge_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "judge_notes": { "type": "string" },
+        "outcome": { "enum": ["pending", "approved", "rejected", "failed"] },
+        "rejection_reason": { "enum": ["auto_judge", "user", "continuity", "artifact", "timeout"] },
+        "approved_by": { "type": "string" },
+        "error": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "outcome": { "const": "approved" } }, "required": ["outcome"] },
+          "then": { "required": ["completed_at", "render_path", "approved_by"] }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "rejected" } }, "required": ["outcome"] },
+          "then": { "required": ["rejection_reason"] }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "failed" } }, "required": ["outcome"] },
+          "then": { "required": ["error"] }
+        }
+      ]
+    },
+    "historyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ts", "event", "by"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/iso8601Utc" },
+        "event": { "type": "string" },
+        "by": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    },
+    "judgeFeedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ts", "feedback_type", "severity", "observation"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/iso8601Utc" },
+        "feedback_type": {
+          "type": "string",
+          "enum": ["composition", "lighting", "timing", "continuity", "artifact", "motion", "audio_sync"]
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "warn", "note"]
+        },
+        "observation": { "type": "string", "description": "What the Judge observed (e.g., 'horizon 20px higher than sh_002')" },
+        "suggestion": { "type": "string", "description": "Actionable suggestion (e.g., 'reduce saturation by 30%, increase contrast')" },
+        "from_agent": { "type": "string" }
+      }
+    },
+    "creativeDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ts", "decision_type", "trigger", "action", "rationale", "decided_by"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/iso8601Utc" },
+        "decision_type": {
+          "type": "string",
+          "enum": ["reorder", "merge", "split", "scope_change", "style_pivot", "duration_adjust"],
+          "description": "Category of film-level creative pivot"
+        },
+        "trigger": {
+          "type": "string",
+          "description": "What feedback or constraint prompted the decision (e.g., 'Creative Director flagged pacing sag in middle third', 'USD $120 spent with 3 shots remaining')"
+        },
+        "action": {
+          "type": "string",
+          "description": "Concrete action taken (e.g., 'swapped sh_004 and sh_006', 'merged sh_008+sh_009 into sh_008 at 6.5s')"
+        },
+        "affected_shots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/shotId" }
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this pivot improves the film (tied to brief.tone/artistic_style)"
+        },
+        "decided_by": {
+          "type": "string",
+          "enum": ["producer", "user"]
+        },
+        "source_feedback_refs": {
+          "type": "array",
+          "description": "Pointers to creative_feedback entries that drove this decision. Enables audit trail from observation → suggestion → decision.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shot_id", "feedback_index"],
+            "properties": {
+              "shot_id": { "$ref": "#/$defs/shotId" },
+              "feedback_index": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "creativeFeedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ts", "from_agent", "feedback"],
+      "properties": {
+        "ts": { "$ref": "#/$defs/iso8601Utc" },
+        "from_agent": { "type": "string", "enum": ["creative_director", "editor_agent", "audio_agent", "shot_judge"] },
+        "feedback": { "type": "string", "description": "Creative observation or concern" },
+        "suggestion": { "type": "string", "description": "Suggested action (e.g., 'extend duration by 0.5s', 'reorder before sh_002')" },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "How important this feedback is to narrative/pacing"
+        },
+        "addressed": { "type": "boolean", "description": "Whether Producer addressed this feedback" },
+        "addressed_by": { "type": "string", "description": "What action Producer took" },
+        "addressed_at": { "$ref": "#/$defs/iso8601Utc" }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dialogue", "sfx"],
+      "properties": {
+        "dialogue": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shot_id", "line_id", "text", "voice_id", "audio_path", "duration_s", "timing"],
+            "properties": {
+              "shot_id": { "$ref": "#/$defs/shotId" },
+              "line_id": { "type": "string" },
+              "text": { "type": "string" },
+              "voice_id": { "type": "string" },
+              "audio_path": { "$ref": "#/$defs/relativePath" },
+              "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+              "timing": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["in_s", "out_s"],
+                "properties": {
+                  "in_s": { "type": "number", "minimum": 0 },
+                  "out_s": { "type": "number", "exclusiveMinimum": 0 }
+                }
+              },
+              "compressibility_s": {
+                "type": "number",
+                "minimum": 0,
+                "description": "Audio Agent's self-assessment: how much tighter this take could be without losing intelligibility. Read by Editor Agent when proposing shot-duration changes; avoids a round-trip query. 0 = take is already at minimum viable pace."
+              }
+            }
+          }
+        },
+        "music_path": { "$ref": "#/$defs/relativePath" },
+        "sfx": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["shot_id", "sfx_id", "description", "audio_path"],
+            "properties": {
+              "shot_id": { "$ref": "#/$defs/shotId" },
+              "sfx_id": { "type": "string" },
+              "description": { "type": "string" },
+              "audio_path": { "$ref": "#/$defs/relativePath" }
+            }
+          }
+        }
+      }
+    },
+    "edit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "fcpxml_version"],
+      "properties": {
+        "fcpxml_path": { "$ref": "#/$defs/relativePath" },
+        "fcpxml_version": { "type": "string", "pattern": "^1\\.\\d+$" },
+        "render_path": { "$ref": "#/$defs/relativePath" },
+        "total_duration_s": { "type": "number", "minimum": 0 },
+        "status": { "enum": ["pending", "rendering", "approved", "failed"] }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cap_usd",
+        "spent_usd",
+        "by_provider",
+        "alibaba_quota_remaining",
+        "elevenlabs_credits_remaining"
+      ],
+      "properties": {
+        "cap_usd": { "type": "number", "exclusiveMinimum": 0 },
+        "spent_usd": { "type": "number", "minimum": 0 },
+        "by_provider": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        },
+        "alibaba_quota_remaining": { "type": "integer", "minimum": 0 },
+        "elevenlabs_credits_remaining": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_stage", "last_event_id", "resumable"],
+      "properties": {
+        "current_stage": { "enum": ["script", "make", "judge", "audio", "edit", "done"] },
+        "last_event_id": { "type": "integer", "minimum": 0 },
+        "resumable": { "type": "boolean" }
+      }
+    }
+  }
+}
