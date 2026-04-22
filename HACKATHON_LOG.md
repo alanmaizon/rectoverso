@@ -7,6 +7,50 @@ Format: `[ISO-timestamp] <tag>: <one-line entry>`. Multi-line notes allowed unde
 
 ---
 
+## Day 3 — Thu Apr 23
+
+### 2026-04-23T10:30:00Z — Tier-3 LLM adapters + `rectoverso run` driver landed
+First real Anthropic SDK calls in the codebase. Screenwriter and PromptSmith are now executable adapters, and a new `rectoverso run <brief.json>` command drives them end-to-end: brief → shot list → router → per-shot prompts → manifest.json fully prompted and fully routed. Stops short of Tier-2 agents (next up for Day 4).
+
+**LLM wrapper** ([src/producer/llm.py](src/producer/llm.py)):
+- `call_json(system, user, client=..., model=...)` — one shared call site. System prompt is marked `cache_control: {"type": "ephemeral"}` so the invariant block caches aggressively; the Anthropic prompt-cache discipline from CLAUDE.md § Budget is load-bearing for staying under the $500 Anthropic budget across an 8-shot run (~18 calls per film).
+- Robust JSON extractor: bare, ```json fences, plain ``` fences, and trailing-prose-after-JSON all parse. `LLMEmptyResponse` / `LLMJSONDecodeError` preserve the raw text for debugging.
+- `LLMClient` Protocol + `RealAnthropicClient` adapter + `default_client()` factory. Tests inject a `StubClient` with a `create_message` method; production uses the real SDK. SDK import is lazy inside `default_client()` so the module loads in env without `ANTHROPIC_API_KEY`.
+
+**Screenwriter** ([src/producer/screenwriter.py](src/producer/screenwriter.py), [prompts/screenwriter.md](prompts/screenwriter.md)):
+- Tool-Protocol compliant (`name="screenwriter"`). No pair contracts (registry returns `[]`) — it runs unconditionally at film level.
+- Validates the model's output shape strictly: required fields per shot, motion-level enum, duration bounds [1.5, 8.0]s per shot, no duplicate `order`, well-formed dialogue objects. Duration sum ±5% of target is a *flagged warning* (`summary.within_duration_bound`), NOT a hard failure — the Producer decides whether to retry.
+- Dialogue lines are preserved in the `dispatch_result` event payload but intentionally NOT projected into `audio.dialogue[]` — the schema requires `voice_id`/`audio_path`/`duration_s`/`timing` which only Audio Agent (Day-4) produces.
+
+**PromptSmith** ([src/producer/prompt_smith.py](src/producer/prompt_smith.py), [prompts/prompt_smith.md](prompts/prompt_smith.md)):
+- Tool-Protocol compliant (`name="prompt_smith"`). Pair contracts 2 (shot_judge → prompt_smith) and 3 (CD → prompt_smith) fire upstream via `validate_before_dispatch` — the adapter trusts that by the time it's called, `judge_notes` / `artistic_direction` are guaranteed populated when their respective flags are set.
+- Packs `shot`/`routing`/`brief` into the dispatch `ctx` dict; dispatch() forwards ctx as the tool payload, so the same dict carries adapter inputs AND contract flags (`revision`, `creative_driven`). Clean union.
+- User payload surfaces routing capability hints (`supports_negative_prompt`, `supports_reference_images`, `supports_first_last_frame`, `max_reference_images`, `max_duration_s`) so the system prompt can route per-provider grammar decisions (Veo vs Kling vs Wan) deterministically.
+
+**`rectoverso run` driver** ([src/rectoverso/run.py](src/rectoverso/run.py)):
+- Flow: load brief.json → seed schema-valid manifest → save → dispatch Screenwriter → project shots (with `sh_NNN` IDs from `order`) → save → for each shot: router.route → project routing → save → dispatch PromptSmith → project prompt → save. Every save is atomic (tmpfile + fsync + `os.replace`), every dispatch writes `dispatch_intent`/`dispatch_result` to events.db, router decisions get their own `router_decision` kind.
+- `--dry-run` wires a deterministic `_StubClient` (same LLMClient Protocol) that produces an 8-shot list summing to target duration ±5% and templated provider prompts. No network, no credits. Exists so tests and the Day-6 demo can run offline.
+- Exit codes: `0` success, `2` missing file, `3` bad brief / schema failure, `4` `RoutingError`, `5` `DispatchFailure` or `ContractViolation`.
+- Seeds budget envelope from CLAUDE.md § Budget ($151 USD cap, 72 Wan quota, 117999 ElevenLabs credits).
+
+**Smoke test** (dry-run, repo root): a 45s brief routes to 4×Kling (humans), 2×Veo (heroes without humans), 2×Wan (workhorse non-humans). Every shot transitions to `status="prompted"`. Events log captures 9 `dispatch_intent` + 9 `dispatch_result` + 8 `router_decision` = 26 events for an 8-shot film.
+
+**Tests**: 43 new across three files. Full suite **266/266 passing** (43 new + 223 preexisting). Coverage:
+- [tests/producer/test_llm.py](tests/producer/test_llm.py) — 12 tests: JSON extraction (bare/fenced/prose), cache_control wiring, model/max_tokens defaults, empty/malformed response errors, system-prompt file loading and caching.
+- [tests/producer/test_screenwriter.py](tests/producer/test_screenwriter.py) — 14 tests: happy path, include_raw flag, array-vs-object tolerance, duration-out-of-bound as warning, validation errors (missing fields, bad motion, bad duration, duplicate orders, malformed dialogue), dispatch integration.
+- [tests/producer/test_prompt_smith.py](tests/producer/test_prompt_smith.py) — 11 tests: happy path, user-payload wiring, revision path (judge_notes + prior prompt in payload), validation errors, reference-image paths, and the end-to-end Contract 2 block via `dispatch()` when `revision=True` but no `judge_notes` exist.
+- [tests/cli/test_run.py](tests/cli/test_run.py) — 6 tests: dry-run emits fully prompted manifest, events.db contents, router honors humans-never-veo + hero-without-humans routes to Veo, and the three exit-code paths (2/3).
+
+**Example brief** at [demo/fixtures/brief.example.json](demo/fixtures/brief.example.json). Invocation: `bin/rectoverso run demo/fixtures/brief.example.json --dry-run` produces a fully routed manifest in ~200ms with zero API spend.
+
+Deferred / out of scope for Day 3 (still on the Day-4 plate):
+- Tier-2 Managed Agent adapters (ShotJudge, Audio, Editor, Creative Director) — these need Managed Agents sessions, not Messages API.
+- Actual Renderer adapter (fal.ai Kling, DashScope Wan, Vertex Veo) — fixture-replay for now, live for Day 5.
+- Audio Agent + Editor Agent integration — composition authoring + Hyperframes render.
+- DEMO_MODE=1 fixture files under `demo/fixtures/` — Day 6.
+
+---
+
 ## Day 2 — Wed Apr 22
 
 ### 2026-04-23T09:30:00Z — Editor pivot: Hyperframes replaces FCPXML as default renderer

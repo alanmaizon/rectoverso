@@ -1,7 +1,8 @@
-"""rectoverso CLI — argparse-based, read-only/dry-run commands.
+"""rectoverso CLI — argparse-based commands.
 
 Surface (see docs/cli.md for full reference):
 
+    rectoverso run <brief.json> [--out PATH] [--dry-run] [--json]
     rectoverso manifest show [PATH]
     rectoverso manifest validate [PATH]
     rectoverso budget show [PATH]
@@ -12,8 +13,10 @@ Surface (see docs/cli.md for full reference):
     rectoverso version
 
 Design principles:
-    - Pure inspection. No tool dispatch, no live API calls.
-    - Structured JSON output available via `--json` on every inspection command.
+    - Inspection subcommands are read-only. `run` is the single exception —
+      it drives Screenwriter + PromptSmith via the Anthropic API (or a stub
+      under --dry-run) and writes state/manifest.json + state/events.db.
+    - Structured JSON output via `--json` on every command.
     - Exit code 0 on success; non-zero on any error, violation, or refusal.
     - Terminal output is terse and mono-friendly; colors optional.
 """
@@ -404,6 +407,11 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Inspect, dry-run, and preflight the rectoverso pipeline. All commands are read-only.",
     )
     sub = p.add_subparsers(dest="group", required=True)
+
+    # ---- run (driver) -----------------------------------------------------
+    from . import run as _run_mod
+
+    _run_mod.add_subparser(sub)
 
     # ---- manifest ---------------------------------------------------------
     g_man = sub.add_parser("manifest", help="manifest inspection and validation")

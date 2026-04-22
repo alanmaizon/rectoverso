@@ -1,0 +1,8 @@
+{
+  "project_id": "whisper_platform",
+  "logline": "A woman waits on an empty platform for a train that never comes, and realizes she has been waiting for years.",
+  "target_duration_s": 45,
+  "tone": ["quiet", "melancholic", "patient"],
+  "genre": "drama",
+  "artistic_style": "film noir, low-key lighting, handheld, muted palette"
+}

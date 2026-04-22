@@ -40,6 +40,17 @@ from .budget import BudgetCheck, BudgetExceeded, check_before_render, record_spe
 from .dispatch import dispatch
 from .events import EventLog, Event, KINDS, open_event_log
 from .hyperframes import HyperframesTool
+from .llm import (
+    LLMClient,
+    LLMEmptyResponse,
+    LLMError,
+    LLMJSONDecodeError,
+    LLMResponse,
+    RealAnthropicClient,
+    call_json,
+    default_client,
+    load_system_prompt,
+)
 from .manifest_io import (
     LoadResult,
     ManifestValidationError,
@@ -48,6 +59,8 @@ from .manifest_io import (
     save_manifest_atomic,
     validate_manifest,
 )
+from .prompt_smith import PromptSmithTool
+from .screenwriter import ScreenwriterTool
 from .types import DispatchFailure, DispatchResult, Tool
 
 __all__ = [
@@ -60,6 +73,17 @@ __all__ = [
     "KINDS",
     "open_event_log",
     "HyperframesTool",
+    "ScreenwriterTool",
+    "PromptSmithTool",
+    "LLMClient",
+    "LLMResponse",
+    "LLMError",
+    "LLMEmptyResponse",
+    "LLMJSONDecodeError",
+    "RealAnthropicClient",
+    "call_json",
+    "default_client",
+    "load_system_prompt",
     "LoadResult",
     "ManifestValidationError",
     "load_manifest",
