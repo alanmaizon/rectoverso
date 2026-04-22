@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# rectoverso CLI wrapper — zero-install invocation from the repo root.
+# Prepends src/ to PYTHONPATH so `python -m rectoverso` resolves the package.
+set -euo pipefail
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export PYTHONPATH="${repo_root}/src:${PYTHONPATH-}"
+python_bin="${PYTHON_BIN:-}"
+if [[ -z "${python_bin}" ]]; then
+  if [[ -x "${repo_root}/.venv/bin/python3" ]]; then
+    python_bin="${repo_root}/.venv/bin/python3"
+  else
+    python_bin="$(command -v python3)"
+  fi
+fi
+exec "${python_bin}" -m rectoverso "$@"

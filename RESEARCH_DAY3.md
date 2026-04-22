@@ -1,0 +1,72 @@
+# HyperFrames
+
+## Docs
+
+- [App Showcase](https://hyperframes.mintlify.app/catalog/blocks/app-showcase.md): Fitness app product showcase with three floating smartphone screens
+- [Chromatic Radial Split](https://hyperframes.mintlify.app/catalog/blocks/chromatic-radial-split.md): Shader transition with chromatic aberration radial split
+- [Cinematic Zoom](https://hyperframes.mintlify.app/catalog/blocks/cinematic-zoom.md): Shader transition with dramatic zoom blur
+- [Cross Warp Morph](https://hyperframes.mintlify.app/catalog/blocks/cross-warp-morph.md): Shader transition with cross-warped morphing
+- [Data Chart](https://hyperframes.mintlify.app/catalog/blocks/data-chart.md): Animated bar + line chart with staggered reveal, NYT-style typography, and value labels
+- [Domain Warp Dissolve](https://hyperframes.mintlify.app/catalog/blocks/domain-warp-dissolve.md): Shader transition with fractal noise domain warping
+- [Flash Through White](https://hyperframes.mintlify.app/catalog/blocks/flash-through-white.md): Shader transition with white flash crossfade
+- [Flowchart](https://hyperframes.mintlify.app/catalog/blocks/flowchart.md): Animated decision tree with SVG connectors, sticky-note nodes, cursor interaction, and typing correction
+- [Glitch](https://hyperframes.mintlify.app/catalog/blocks/glitch.md): Shader transition with digital glitch artifacts
+- [Gravitational Lens](https://hyperframes.mintlify.app/catalog/blocks/gravitational-lens.md): Shader transition with gravitational lensing distortion
+- [Instagram Follow](https://hyperframes.mintlify.app/catalog/blocks/instagram-follow.md): Animated Instagram follow overlay with profile card and follow button
+- [Light Leak](https://hyperframes.mintlify.app/catalog/blocks/light-leak.md): Shader transition with cinematic light leak overlay
+- [Logo Outro](https://hyperframes.mintlify.app/catalog/blocks/logo-outro.md): Cinematic logo reveal with piece-by-piece assembly, glow bloom, tagline fade-in, and URL pill
+- [macOS Notification](https://hyperframes.mintlify.app/catalog/blocks/macos-notification.md): Animated macOS-style notification banner with app icon and message
+- [Reddit Post Card](https://hyperframes.mintlify.app/catalog/blocks/reddit-post.md): Animated Reddit post card overlay with upvotes and comments
+- [Ridged Burn](https://hyperframes.mintlify.app/catalog/blocks/ridged-burn.md): Shader transition with ridged turbulence burn effect
+- [Ripple Waves](https://hyperframes.mintlify.app/catalog/blocks/ripple-waves.md): Shader transition with concentric ripple wave distortion
+- [SDF Iris](https://hyperframes.mintlify.app/catalog/blocks/sdf-iris.md): Shader transition with signed distance field iris reveal
+- [Spotify Now Playing](https://hyperframes.mintlify.app/catalog/blocks/spotify-card.md): Animated Spotify now-playing card with album art and progress bar
+- [Swirl Vortex](https://hyperframes.mintlify.app/catalog/blocks/swirl-vortex.md): Shader transition with swirling vortex distortion
+- [Thermal Distortion](https://hyperframes.mintlify.app/catalog/blocks/thermal-distortion.md): Shader transition with heat haze thermal distortion
+- [TikTok Follow](https://hyperframes.mintlify.app/catalog/blocks/tiktok-follow.md): Animated TikTok follow overlay with profile card and follow button
+- [3D Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-3d.md): Showcase of 3D perspective flip and rotate transitions
+- [Blur Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-blur.md): Showcase of blur-based transitions between scenes
+- [Cover Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-cover.md): Showcase of cover/uncover slide transitions
+- [Destruction Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-destruction.md): Showcase of destructive break-apart transitions
+- [Dissolve Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-dissolve.md): Showcase of dissolve and fade transitions
+- [Distortion Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-distortion.md): Showcase of warp and distortion transitions
+- [Grid Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-grid.md): Showcase of grid-based tile transitions
+- [Light Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-light.md): Showcase of light-based glow and flash transitions
+- [Mechanical Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-mechanical.md): Showcase of mechanical shutter and iris transitions
+- [Other Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-other.md): Showcase of miscellaneous creative transitions
+- [Push Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-push.md): Showcase of push and slide transitions
+- [Radial Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-radial.md): Showcase of radial wipe and reveal transitions
+- [Scale Transitions](https://hyperframes.mintlify.app/catalog/blocks/transitions-scale.md): Showcase of scale and zoom transitions
+- [3D UI Reveal](https://hyperframes.mintlify.app/catalog/blocks/ui-3d-reveal.md): Perspective 3D reveal animation for UI elements
+- [Whip Pan](https://hyperframes.mintlify.app/catalog/blocks/whip-pan.md): Shader transition simulating a fast camera whip pan
+- [X Post Card](https://hyperframes.mintlify.app/catalog/blocks/x-post.md): Animated X/Twitter post card overlay with engagement metrics
+- [YouTube Lower Third](https://hyperframes.mintlify.app/catalog/blocks/yt-lower-third.md): Animated YouTube subscribe lower third with avatar and channel info
+- [Grain Overlay](https://hyperframes.mintlify.app/catalog/components/grain-overlay.md): Animated film grain texture overlay using CSS keyframes — adds warmth and analog character to any composition
+- [Grid Pixelate Wipe](https://hyperframes.mintlify.app/catalog/components/grid-pixelate-wipe.md): Transition effect where the screen dissolves into a grid of squares that fade out with staggered timing — use between scenes
+- [Shimmer Sweep](https://hyperframes.mintlify.app/catalog/components/shimmer-sweep.md): Animated light sweep across text or elements using a CSS gradient mask — ideal for AI accents and premium reveals
+- [Compositions](https://hyperframes.mintlify.app/concepts/compositions.md): The fundamental building block of a Hyperframes video.
+- [Data Attributes](https://hyperframes.mintlify.app/concepts/data-attributes.md): Core attributes for controlling element timing and behavior.
+- [Deterministic Rendering](https://hyperframes.mintlify.app/concepts/determinism.md): Same input, identical output. Every time.
+- [Frame Adapters](https://hyperframes.mintlify.app/concepts/frame-adapters.md): Bring your own animation runtime to Hyperframes.
+- [Contributing](https://hyperframes.mintlify.app/contributing.md): How to contribute to Hyperframes.
+- [Testing Local CLI Changes](https://hyperframes.mintlify.app/contributing/testing-local-changes.md): How to test unreleased CLI changes outside the monorepo using your local build.
+- [Examples](https://hyperframes.mintlify.app/examples.md): Built-in examples for common video patterns. Hover to preview animations.
+- [Common Mistakes](https://hyperframes.mintlify.app/guides/common-mistakes.md): Pitfalls that break Hyperframes compositions.
+- [GSAP Animation](https://hyperframes.mintlify.app/guides/gsap-animation.md): Add animations to your Hyperframes compositions with GSAP.
+- [HDR Rendering](https://hyperframes.mintlify.app/guides/hdr.md): Render compositions to HDR10 MP4 (BT.2020 PQ or HLG, 10-bit H.265) when sources contain HDR video or images.
+- [Hyperframes vs Remotion](https://hyperframes.mintlify.app/guides/hyperframes-vs-remotion.md): Why we built Hyperframes, how it differs from Remotion in practice, and where each tool fits.
+- [Performance](https://hyperframes.mintlify.app/guides/performance.md): How to keep preview playback smooth and diagnose expensive compositions.
+- [Prompt Guide](https://hyperframes.mintlify.app/guides/prompting.md): How to prompt Claude Code, Cursor, Codex, and other AI agents to author Hyperframes compositions — with copy-pasteable examples and vocabulary tables.
+- [Rendering](https://hyperframes.mintlify.app/guides/rendering.md): Render compositions to MP4, MOV, or WebM locally or in Docker.
+- [Timeline Editing](https://hyperframes.mintlify.app/guides/timeline-editing.md): What you can edit in the Studio timeline today, how those edits map back to HTML, and the current limitations.
+- [Troubleshooting](https://hyperframes.mintlify.app/guides/troubleshooting.md): Solutions for common Hyperframes issues.
+- [Website to Video](https://hyperframes.mintlify.app/guides/website-to-video.md): Capture any website and turn it into a production video with a single prompt.
+- [Introduction](https://hyperframes.mintlify.app/introduction.md): Write HTML. Render video. Built for agents.
+- [CLI](https://hyperframes.mintlify.app/packages/cli.md): Create, preview, and render HTML video compositions from the command line.
+- [@hyperframes/core](https://hyperframes.mintlify.app/packages/core.md): Types, HTML generation, runtime, and linter — the foundation every other package depends on.
+- [@hyperframes/engine](https://hyperframes.mintlify.app/packages/engine.md): Seekable page-to-video capture engine using Chrome's BeginFrame API.
+- [@hyperframes/player](https://hyperframes.mintlify.app/packages/player.md): Embeddable web component for playing HyperFrames compositions in any web page.
+- [@hyperframes/producer](https://hyperframes.mintlify.app/packages/producer.md): Full HTML-to-video rendering pipeline with encoding, audio mixing, and Docker support.
+- [@hyperframes/studio](https://hyperframes.mintlify.app/packages/studio.md): Visual composition editor with live preview, timeline view, and hot reload.
+- [Quickstart](https://hyperframes.mintlify.app/quickstart.md): Create, preview, and render your first Hyperframes video in under two minutes.
+- [HTML Schema Reference](https://hyperframes.mintlify.app/reference/html-schema.md): Complete reference for authoring Hyperframes HTML compositions.
