@@ -45,6 +45,19 @@ Creative Director is the only agent with explicit aesthetic authority — it rea
 
 When deciding where a new capability lives, apply the tier test — if it's stateless generation, don't make it a Managed Agent just to inflate the "managed agents used" count. The prize criterion rewards thoughtful application.
 
+## Agent pair contracts (preprocessing / verification)
+
+Before any tool dispatch, the Producer calls `src.contracts.validate_before_dispatch(agent, shot_id, manifest, ctx)`. This is the verification step that catches silent breakage — scenarios where a dispatch would succeed at the call site but produce plausible-but-wrong output downstream. Spec: [docs/contracts.md](docs/contracts.md). Five contracts, one module each in `src/contracts/`, every silent-breakage case has an isolated test in `tests/contracts/`.
+
+Three things the preprocessing layer checks:
+- **Intent** — is the dispatch well-formed? (revision on an unknown shot, Editor invoked without a target, creative-driven dispatch with no CD feedback)
+- **Architecture** — does the pair invariant hold? (`compressibility_s` before Editor, `judge_notes` before revision, `artistic_direction` updated after CD feedback, CD authority honored before Editor)
+- **Edge cases** — the failure modes in [docs/agents.md § Agent pair contracts](docs/agents.md#agent-pair-contracts) where silent drift produces wrong output rather than an error
+
+Return shape: `list[Violation]` of warn-severity findings (log to `history[]`, continue), or raises `ContractViolation` for block-severity findings (halt). Contracts are pure functions over the manifest — no I/O, no mutation. The Producer is responsible for wrapping calls with `state/events.db` writes; contracts are event-free by design so that a fresh harness can re-run them deterministically against a recovered manifest.
+
+Adding a new contract means: (1) a module in `src/contracts/` that calls `register(ContractName.X, check)`, (2) a row in the `contracts_for_dispatch` table, (3) an isolated silent-breakage test. Changing the registry is changing the enforcement surface.
+
 ## The shot manifest (keystone)
 
 Single source of truth at `state/manifest.json`. Every agent reads inputs from it and writes outputs back via status transitions. This is what makes the pipeline resumable across sessions.
@@ -74,7 +87,7 @@ Role-based, not tier-ranked. Two classes:
 Wan access is **free-quota metered**, not USD. Budget tracks `alibaba_quota_remaining` separately; USD cost for Wan is `0.0`. Quota expires 2026-07-19 (well past submission).
 
 **Specialty** (3–5 hero shots per film, flagged `is_hero: true` by Screenwriter):
-- **Vertex AI Veo 3.1 Fast** — establishing/cinematic moments only. **Hard $15 spend cap across the whole project.** **Never humans** (EU restriction is a router hard rule, not a preference).
+- **Vertex AI Veo 3.1 Fast** — establishing/cinematic moments only. **$300 GCP credits available**; operational cap is **$15 project-wide — a scope-control decision, not an availability limit.** The $15 bounds how much of the film is Veo-tier; $300 is the headroom for retries, demo-day safety, or Day-5 expansion if a scope change gets signed off. **Never humans** (EU restriction is a router hard rule, not a preference).
 
 **Day-4 consideration** (reference-image generation for Kling I2V subject consistency, if time allows):
 - Qwen-image-2.0, Google nano-banana. Not integrated for Days 1–3. Reference images in v1 come from `inputs/refs/` manually.
@@ -97,7 +110,7 @@ Actual available funds:
 - **Anthropic**: $500 credits (Opus 4.7 orchestration, Managed Agents).
 - **fal.ai**: $136 total = 2 × $68 keys (Kling 2.x). Two keys are for failover and rate-limit resilience — renderer tries primary first, falls over to secondary on auth/quota error.
 - **Alibaba Wan**: $0 USD, free quota (50–100 calls, expires 2026-07-19). Tracked as `budget.alibaba_quota_remaining`.
-- **Vertex AI Veo**: $15 hard cap (specialty tier, 3–5 hero shots/film).
+- **Vertex AI Veo**: $300 GCP credits available; operational cap **$15** (specialty tier, 3–5 hero shots/film). $15 is the scope cap, not the availability cap — the Producer must still refuse any render that would push `spent_usd + estimated_cost_usd` past `cap_usd`. Raising `cap_usd` is a scope decision, not a bug fix.
 - **ElevenLabs**: $0 USD, 117,999 credits available (pre-paid). Tracked as `budget.elevenlabs_credits_remaining`. Audio Agent estimates credit cost before each call.
 
 Total USD cap: **$151** ($136 fal + $15 Veo). Seed `budget.cap_usd: 151` in the first real manifest. Wan and ElevenLabs add zero USD; they're gated by their own quota counters.

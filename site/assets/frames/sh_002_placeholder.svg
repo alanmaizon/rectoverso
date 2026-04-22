@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8B26A"></stop>
+      <stop offset="1" stop-color="#C3432B"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#sky)"></rect>
+  <rect x="0" y="620" width="1600" height="280" fill="#2B1E14" fill-opacity="0.82"></rect>
+  <rect x="690" y="360" width="220" height="360" fill="#1C1A17"></rect>
+  <rect x="690" y="360" width="220" height="360" fill="none" stroke="#F4EFE6" stroke-width="2" stroke-opacity="0.35"></rect>
+  <text x="40" y="870" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" fill="#F4EFE6" fill-opacity="0.72" letter-spacing="0.15em">PLACEHOLDER · SH_002 · THE DOOR</text>
+</svg>

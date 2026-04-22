@@ -1,0 +1,319 @@
+/* =========================================================================
+   Recto Verso Productions — color + type tokens
+   Brief on one side, film on the other.
+   ========================================================================= */
+
+/* --- Fonts --------------------------------------------------------------- */
+/* Faces in use:
+   - Gragio (brand): titles only (masthead, H1, H2, H3, display italic numerals).
+   - Source Serif 4: body, lead, small, blockquote, editorial prose. Chosen for
+     steadier reading at body size than the original brand face; editorial
+     register preserved. Google Fonts.
+   - JetBrains Mono: metadata, numerals, IDs, timestamps, costs. Google Fonts. */
+@font-face {
+  font-family: "Gragio";
+  src: url("../fonts/gragio.otf") format("opentype"),
+       url("../fonts/gragio.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  /* --- Paper (default, light mode) -------------------------------------- */
+  --paper:        #F4EFE6;   /* warm off-white, never pure white */
+  --paper-2:      #EBE4D6;   /* subtle recession */
+  --ink:          #1C1A17;   /* deep warm black */
+  --ink-2:        #403B34;   /* secondary ink */
+
+  --fg-1:         var(--ink);
+  --fg-2:         rgba(28, 26, 23, 0.68);  /* dimmed ink */
+  --fg-3:         rgba(28, 26, 23, 0.44);  /* very dim */
+  --fg-rule:      rgba(28, 26, 23, 0.18);  /* hairline rules */
+  --fg-rule-2:    rgba(28, 26, 23, 0.08);  /* faintest division */
+
+  --bg-1:         var(--paper);
+  --bg-2:         var(--paper-2);
+
+  /* --- Accent ----------------------------------------------------------- */
+  --accent:        #C3432B;  /* vermilion */
+  --accent-press:  #9E311E;
+  --accent-ink:    #F4EFE6;  /* text-on-accent */
+
+  /* --- Semantic (agent + shot status) ----------------------------------- */
+  /* Muted, never saturated. These colour text dots in the trace, nothing more. */
+  --status-approved:   #4A6B3A;   /* forest */
+  --status-rejected:   #8A3A2A;   /* oxblood */
+  --status-escalated:  #9A6A24;   /* mustard */
+  --status-pending:    #6A6354;   /* warm stone */
+
+  /* --- Radii ------------------------------------------------------------ */
+  --radius-0: 0;
+  --radius-1: 2px;
+
+  /* --- Shadows ---------------------------------------------------------- */
+  /* Intentionally empty. The brief forbids shadows. Do not add. */
+
+  /* --- Spacing (8px base) ---------------------------------------------- */
+  --sp-0:   4px;
+  --sp-1:   8px;
+  --sp-2:  16px;
+  --sp-3:  24px;
+  --sp-4:  32px;
+  --sp-5:  48px;
+  --sp-6:  64px;
+  --sp-7:  96px;
+  --sp-8: 160px;   /* section margins, desktop */
+
+  /* --- Rules ------------------------------------------------------------ */
+  --rule-hair:    1px solid var(--fg-rule);
+  --rule-faint:   1px solid var(--fg-rule-2);
+  --rule-ink:     1px solid var(--ink);
+  --rule-accent:  1px solid var(--accent);
+
+  /* --- Type families --------------------------------------------------- */
+  --f-display: "Gragio", Georgia, "Times New Roman", serif;
+  --f-serif:   "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono:  "JetBrains Mono", ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+
+  /* --- Type scale (px) ------------------------------------------------- */
+  --t-masthead: 88px;
+  --t-h1:       56px;
+  --t-h2:       36px;
+  --t-h3:       24px;
+  --t-lead:     22px;
+  --t-body:     18px;
+  --t-small:    14px;
+  --t-mono:     13px;
+  --t-micro:    11px;   /* timestamps, shot indices */
+
+  --lh-tight:   1.08;
+  --lh-title:   1.15;
+  --lh-body:    1.55;
+  --lh-mono:    1.45;
+
+  --tracking-caps: 0.08em;
+  --tracking-tight: -0.015em;
+
+  /* --- Motion ---------------------------------------------------------- */
+  --ease-editorial: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast:   120ms;
+  --dur-med:    200ms;
+  --dur-slow:   320ms;
+
+  /* --- Layout ---------------------------------------------------------- */
+  --measure:    62ch;       /* max body line length */
+  --gutter:     32px;
+  --gutter-lg:  64px;
+  --margin-lg:  160px;      /* desktop section margin */
+  --margin-md:  96px;
+  --margin-sm:  24px;
+}
+
+/* =========================================================================
+   Charcoal / dark paper mode. Attribute, not media query — the film page
+   picks one and commits. Apply on <html data-mode="charcoal">.
+   ========================================================================= */
+[data-mode="charcoal"] {
+  --paper:   #14120F;
+  --paper-2: #1E1B16;
+  --ink:     #E8E2D6;
+  --ink-2:   #B8AF9E;
+
+  --fg-1:   var(--ink);
+  --fg-2:   rgba(232, 226, 214, 0.68);
+  --fg-3:   rgba(232, 226, 214, 0.40);
+  --fg-rule:   rgba(232, 226, 214, 0.18);
+  --fg-rule-2: rgba(232, 226, 214, 0.07);
+
+  --bg-1: var(--paper);
+  --bg-2: var(--paper-2);
+
+  --accent:       #E86A4E;   /* lifted on dark */
+  --accent-press: #C3432B;
+  --accent-ink:   #14120F;
+
+  --status-approved:  #8AA876;
+  --status-rejected:  #D88B78;
+  --status-escalated: #D3A564;
+  --status-pending:   #A8A092;
+}
+
+/* =========================================================================
+   Base
+   ========================================================================= */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--f-serif);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  font-feature-settings: "kern", "liga", "calt";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body { margin: 0; }
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* =========================================================================
+   Semantic type — use these classes or tags directly.
+   ========================================================================= */
+h1, .t-h1,
+h2, .t-h2,
+h3, .t-h3,
+.t-masthead {
+  font-family: var(--f-display);
+  font-weight: 400;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-1);
+  text-wrap: balance;
+  margin: 0;
+}
+
+.t-masthead {
+  font-size: var(--t-masthead);
+  line-height: var(--lh-tight);
+  font-style: italic;
+  font-weight: 400;
+}
+
+h1, .t-h1 {
+  font-size: var(--t-h1);
+  line-height: var(--lh-title);
+}
+
+h2, .t-h2 {
+  font-size: var(--t-h2);
+  line-height: var(--lh-title);
+}
+
+h3, .t-h3 {
+  font-size: var(--t-h3);
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.t-lead {
+  font-family: var(--f-serif);
+  font-size: var(--t-lead);
+  line-height: 1.45;
+  color: var(--fg-1);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+
+p, .t-body {
+  font-family: var(--f-serif);
+  font-size: var(--t-body);
+  line-height: var(--lh-body);
+  color: var(--fg-1);
+  max-width: var(--measure);
+  text-wrap: pretty;
+  margin: 0 0 1em 0;
+}
+
+.t-small {
+  font-family: var(--f-serif);
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
+/* Eyebrow / small-caps — for section preludes like "shot 05 / scene 2" */
+.t-eyebrow {
+  font-family: var(--f-mono);
+  font-size: var(--t-mono);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* Monospace — metadata, numerals, IDs, timestamps, costs. */
+code, pre, kbd, samp, .t-mono {
+  font-family: var(--f-mono);
+  font-size: var(--t-mono);
+  line-height: var(--lh-mono);
+  font-feature-settings: "kern", "ss01", "zero";   /* slashed zero */
+}
+
+.t-num {
+  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum", "zero", "ss01";
+}
+
+/* Blockquote — pulled serif italic, hanging rule on the left */
+blockquote {
+  font-family: var(--f-serif);
+  font-style: italic;
+  font-size: var(--t-lead);
+  line-height: 1.45;
+  color: var(--fg-1);
+  margin: var(--sp-5) 0;
+  padding-left: var(--sp-3);
+  border-left: var(--rule-hair);
+  max-width: var(--measure);
+}
+
+/* Inline code chip */
+:not(pre) > code {
+  background: var(--bg-2);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-1);
+  font-size: 0.9em;
+}
+
+/* =========================================================================
+   Links — vermilion on hover, underline on hover only.
+   ========================================================================= */
+a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--fg-rule);
+  transition: color var(--dur-fast) var(--ease-editorial),
+              border-color var(--dur-fast) var(--ease-editorial);
+}
+a:hover {
+  color: var(--accent);
+  border-bottom-color: currentColor;
+}
+a:active { color: var(--accent-press); }
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-bottom-color: transparent;
+}
+
+/* =========================================================================
+   Rules — the only divider on the page.
+   ========================================================================= */
+hr, .rule {
+  border: 0;
+  border-top: var(--rule-hair);
+  margin: var(--sp-6) 0;
+}
+.rule--ink  { border-top: var(--rule-ink); }
+.rule--accent { border-top: var(--rule-accent); }
+.rule--faint  { border-top: var(--rule-faint); }
+
+/* =========================================================================
+   Motion primitives
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
