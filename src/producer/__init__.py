@@ -36,6 +36,7 @@ CLI script). This package provides the atoms those layers compose.
 
 from __future__ import annotations
 
+from .budget import BudgetCheck, BudgetExceeded, check_before_render, record_spend
 from .dispatch import dispatch
 from .events import EventLog, Event, KINDS, open_event_log
 from .hyperframes import HyperframesTool
@@ -65,4 +66,8 @@ __all__ = [
     "load_schema",
     "save_manifest_atomic",
     "validate_manifest",
+    "BudgetCheck",
+    "BudgetExceeded",
+    "check_before_render",
+    "record_spend",
 ]
