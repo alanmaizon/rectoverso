@@ -50,7 +50,6 @@ from .llm import (
     LLMJSONDecodeError,
     LLMResponse,
     default_client,
-    load_system_prompt,
 )
 
 
@@ -110,7 +109,11 @@ class ShotJudgeTool:
         self._client = client
         self._model = model
         self._max_tokens = max_tokens
-        self._system_prompt = system_prompt or load_system_prompt(SYSTEM_PROMPT_PATH)
+        self._system_prompt = (
+            system_prompt
+            if system_prompt is not None
+            else SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
+        )
         self._keyframes = keyframes
         self._ffmpeg = ffmpeg_bin or shutil.which("ffmpeg")
         self._extract_frames = extract_frames or self._default_extract_frames

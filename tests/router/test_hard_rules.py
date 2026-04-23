@@ -133,16 +133,17 @@ def test_turbo_preferred_after_a_failure(
 
 
 def test_duration_bound_excludes_over_limit(capabilities, make_shot, make_budget):
-    # Veo/Wan cap at 8s; Kling at 10s. Asking for 11s excludes all video providers.
+    # Veo caps at 8s; Wan 2.6/2.7 and Kling at 10s. 11s excludes all video providers.
     shot = make_shot(has_humans=False, is_hero=True, duration_s=11.0)
     with pytest.raises(RoutingError):
         route(shot, make_budget(), capabilities)
 
 
 def test_duration_bound_direct_rule(capabilities, make_shot, make_budget):
+    # Veo 3.1 Fast caps at 8s — request 9s and the rule should exclude it.
     shot = make_shot(duration_s=9.0)
-    provider = capabilities.providers[WAN_PLUS]  # 8s cap
-    assert HARD_RULES["duration_bound"](shot, make_budget(), WAN_PLUS, provider) == "exclude"
+    provider = capabilities.providers[VEO]
+    assert HARD_RULES["duration_bound"](shot, make_budget(), VEO, provider) == "exclude"
 
 
 # --- prior_failure_penalty (score multiplier, not hard exclusion) --------

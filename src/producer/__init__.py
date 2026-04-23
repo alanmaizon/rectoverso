@@ -59,11 +59,13 @@ from .manifest_io import (
     save_manifest_atomic,
     validate_manifest,
 )
+from .kling import KlingRendererTool, encode_image_as_data_uri
 from .prompt_smith import PromptSmithTool
 from .renderer import WanRendererTool
 from .screenwriter import ScreenwriterTool
 from .shot_judge import ShotJudgeTool
 from .types import DispatchFailure, DispatchResult, Tool
+from .veo import VeoRendererTool
 
 __all__ = [
     "dispatch",
@@ -78,6 +80,9 @@ __all__ = [
     "ScreenwriterTool",
     "PromptSmithTool",
     "WanRendererTool",
+    "KlingRendererTool",
+    "VeoRendererTool",
+    "encode_image_as_data_uri",
     "ShotJudgeTool",
     "LLMClient",
     "LLMResponse",

@@ -86,7 +86,7 @@ def make_shot() -> Callable[..., dict]:
             "prompt": {"authored_by": "prompt_smith", "primary": "placeholder"},
             "routing": {
                 "chosen_provider": "alibaba_wan_2_7_plus",
-                "chosen_model": "wan-2.7-plus",
+                "chosen_model": "wan2.7-t2v",
                 "rationale": "test",
                 "decided_by": "router",
                 "decided_at": _iso_now(),

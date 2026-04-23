@@ -81,7 +81,7 @@ class WanRendererTool:
         model              : DashScope model id, e.g. "wan-2.7-plus"
         prompt             : primary prompt text (shot.prompt.primary)
         negative_prompt    : optional negative prompt
-        duration_s         : integer seconds (Wan takes {5, 10, 15})
+        duration_s         : integer seconds (Wan takes {5, 10})
         resolution         : "720p" | "1080p" (default 720p)
         output_dir         : directory to save artifacts/renders/{shot_id}/
         attempt_id         : integer (1-indexed; appends to the shot's attempts)
@@ -135,11 +135,10 @@ class WanRendererTool:
         resolution = payload.get("resolution", "720p")
         seed = payload.get("seed")
 
-        # Wan's supported durations per the API docs are {5, 10, 15}. Callers
+        # Wan's supported durations per the API docs are {5, 10}. Callers
         # pass the shot's planned duration; we snap to the nearest legal value
         # and record the clamp in the result for the audit trail.
         actual_duration = _snap_duration(duration_s)
-        size = _resolution_to_size(resolution)
 
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"v{attempt_id}.mp4"
@@ -147,14 +146,14 @@ class WanRendererTool:
         started = time.time()
         poll_log: list[dict[str, Any]] = []
 
-        # 1) submit
+        # 1) submit — body shape differs by model family.
+        #   wan2.7-*  : new protocol → parameters = {resolution, ratio, duration}
+        #   wan2.6-*  : legacy proto → parameters = {size, duration}
+        # See https://www.alibabacloud.com/help/en/model-studio/text-to-video-api-reference
         body: dict[str, Any] = {
             "model": model,
             "input": {"prompt": prompt},
-            "parameters": {
-                "size": size,
-                "duration": actual_duration,
-            },
+            "parameters": _build_parameters(model, resolution, actual_duration),
         }
         if negative_prompt:
             body["input"]["negative_prompt"] = negative_prompt
@@ -289,7 +288,6 @@ class WanRendererTool:
             "requested_duration_s": duration_s,
             "actual_duration_s": actual_duration,
             "resolution": resolution,
-            "size": size,
             "stdout_tail": json.dumps(poll_log)[-500:],
             "stderr_tail": "",
             **({"note": note} if note else {}),
@@ -366,24 +364,56 @@ def _resolve_dashscope_key() -> str | None:
 
 
 def _snap_duration(requested_s: int) -> int:
-    """Wan supports {5, 10, 15} seconds. Snap the shot's planned duration
-    to the nearest legal value, rounding down to keep shot boundaries."""
-    for legal in (5, 10, 15):
-        if requested_s <= legal:
-            return legal
-    return 15
+    """Wan supports {5, 10} seconds on both the 2.6 and 2.7 text-to-video
+    endpoints. Snap upward so we never under-render the shot's planned length."""
+    if requested_s <= 5:
+        return 5
+    return 10
 
 
 def _resolution_to_size(resolution: str) -> str:
+    """Legacy (wan2.6) `size` parameter — width*height string."""
     r = resolution.strip().lower()
     return {"720p": "1280*720", "1080p": "1920*1080"}.get(r, "1280*720")
 
 
+def _resolution_tier(resolution: str) -> str:
+    """Wan 2.7 `resolution` parameter — tier string (`720P` / `1080P`)."""
+    r = resolution.strip().lower()
+    return {"720p": "720P", "1080p": "1080P"}.get(r, "720P")
+
+
+def _build_parameters(model: str, resolution: str, duration_s: int) -> dict[str, Any]:
+    """Construct the DashScope `parameters` object for a given model family.
+
+    Wan 2.7 deprecated `size` in favour of `resolution` + `ratio`; Wan 2.6 and
+    earlier still use `size`. Mismatches are rejected by the API, so the renderer
+    has to branch here rather than paper over it.
+    """
+    if model.startswith("wan2.7"):
+        return {
+            "resolution": _resolution_tier(resolution),
+            "ratio": "16:9",
+            "duration": duration_s,
+        }
+    # wan2.6 and earlier — legacy protocol
+    return {
+        "size": _resolution_to_size(resolution),
+        "duration": duration_s,
+    }
+
+
 def _provider_from_model(model: str) -> str:
-    """Map DashScope model id to the router's provider_id convention."""
-    if "plus" in model.lower():
+    """Map DashScope model id to the router's provider_id convention.
+
+    Provider slots are semantic (plus/turbo → finals/iteration), but model ids
+    are canonical DashScope names. `wan2.7-*` fills the "plus" slot (higher
+    fidelity); `wan2.6-*` fills the "turbo" slot (cheaper/faster iteration).
+    """
+    m = model.lower()
+    if m.startswith("wan2.7"):
         return "alibaba_wan_2_7_plus"
-    if "turbo" in model.lower():
+    if m.startswith("wan2.6") or m.startswith("wan2.5") or m.startswith("wan2.2") or m.startswith("wan2.1"):
         return "alibaba_wan_2_7_turbo"
     return "alibaba_wan"
 
@@ -406,7 +436,7 @@ def _error_body(exc: urllib.error.HTTPError) -> str:
 def _clamp_note(requested: int, actual: int) -> str:
     if requested == actual:
         return ""
-    return f"duration clamped: requested {requested}s -> actual {actual}s (Wan supports {{5,10,15}})"
+    return f"duration clamped: requested {requested}s -> actual {actual}s (Wan supports {{5,10}})"
 
 
 def _failure(

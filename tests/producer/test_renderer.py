@@ -80,7 +80,7 @@ def _payload(
     attempt_id: int = 1,
     duration_s: int = 5,
     resolution: str = "720p",
-    model: str = "wan-2.7-plus",
+    model: str = "wan2.7-t2v",
     negative_prompt: str = "",
     seed: int | None = None,
 ) -> dict:
@@ -126,7 +126,7 @@ def test_happy_path_submit_poll_download(tmp_path: Path) -> None:
 
     assert result["status"] == "ok"
     assert result["provider"] == "alibaba_wan_2_7_plus"
-    assert result["model"] == "wan-2.7-plus"
+    assert result["model"] == "wan2.7-t2v"
     assert result["task_id"] == "t_123"
     assert result["output_size_bytes"] == 2048
     assert result["render_md5"] and len(result["render_md5"]) == 32
@@ -150,8 +150,12 @@ def test_happy_path_submit_poll_download(tmp_path: Path) -> None:
     assert fake_urlopen.calls[3]["url"] == "https://fake/video.mp4"
 
 
-def test_submit_body_shape(tmp_path: Path) -> None:
-    """The submit request body must carry model, prompt, and parameters.size/duration."""
+def test_submit_body_shape_wan27(tmp_path: Path) -> None:
+    """Wan 2.7 uses the new protocol: parameters = {resolution, ratio, duration}.
+
+    The DashScope API rejects wan2.7-* when `size` is sent instead of
+    `resolution`+`ratio`, so this invariant must be locked in.
+    """
     captured: dict[str, Any] = {}
 
     def _capture_submit(req):
@@ -181,20 +185,63 @@ def test_submit_body_shape(tmp_path: Path) -> None:
             tmp_path,
             duration_s=5,
             resolution="1080p",
+            model="wan2.7-t2v",
             negative_prompt="no people",
             seed=42,
         ),
     )
 
-    assert captured["body"]["model"] == "wan-2.7-plus"
+    assert captured["body"]["model"] == "wan2.7-t2v"
     assert captured["body"]["input"]["prompt"].startswith("A wide")
     assert captured["body"]["input"]["negative_prompt"] == "no people"
-    assert captured["body"]["parameters"]["size"] == "1920*1080"
+    assert captured["body"]["parameters"]["resolution"] == "1080P"
+    assert captured["body"]["parameters"]["ratio"] == "16:9"
     assert captured["body"]["parameters"]["duration"] == 5
     assert captured["body"]["parameters"]["seed"] == 42
+    # wan2.7 must NOT use the legacy `size` field.
+    assert "size" not in captured["body"]["parameters"]
     # Auth + async headers
     assert captured["headers"]["Authorization"] == "Bearer sk-abc"
     assert captured["headers"]["X-dashscope-async"].lower() == "enable"
+
+
+def test_submit_body_shape_wan26(tmp_path: Path) -> None:
+    """Wan 2.6 uses the legacy protocol: parameters = {size, duration}.
+
+    A wan2.6-* model sent with `resolution` would be rejected.
+    """
+    captured: dict[str, Any] = {}
+
+    def _capture_submit(req):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _json_response({"output": {"task_id": "t_1", "task_status": "PENDING"}})
+
+    plan = [
+        _capture_submit,
+        lambda req: _json_response(
+            {"output": {"task_status": "SUCCEEDED", "video_url": "https://x/v.mp4"}}
+        ),
+        lambda req: _FakeResponse(b"data"),
+    ]
+    fake_urlopen = _make_urlopen(plan)
+
+    tool = WanRendererTool(
+        api_key="sk-abc",
+        urlopen=fake_urlopen,
+        sleep=lambda _s: None,
+        poll_interval_s=0,
+    )
+    tool(
+        shot_id="sh_003",
+        payload=_payload(tmp_path, duration_s=5, resolution="720p", model="wan2.6-t2v"),
+    )
+
+    assert captured["body"]["model"] == "wan2.6-t2v"
+    assert captured["body"]["parameters"]["size"] == "1280*720"
+    assert captured["body"]["parameters"]["duration"] == 5
+    # wan2.6 must NOT use the new `resolution`/`ratio` fields.
+    assert "resolution" not in captured["body"]["parameters"]
+    assert "ratio" not in captured["body"]["parameters"]
 
 
 # ---------------------------------------------------------------------------
@@ -335,12 +382,16 @@ def test_empty_download_is_failure(tmp_path: Path) -> None:
 
 
 def test_snap_duration() -> None:
+    # Wan 2.6 and 2.7 text-to-video both accept {5, 10}. Anything above 5s
+    # snaps to 10 (the only legal longer value); anything past 10s is also
+    # clamped down to 10 — we deliberately lose the extra seconds rather
+    # than fail the render, and emit a clamp note in the result.
     assert _snap_duration(1) == 5
     assert _snap_duration(5) == 5
     assert _snap_duration(6) == 10
     assert _snap_duration(10) == 10
-    assert _snap_duration(12) == 15
-    assert _snap_duration(30) == 15
+    assert _snap_duration(12) == 10
+    assert _snap_duration(30) == 10
 
 
 def test_resolution_to_size() -> None:

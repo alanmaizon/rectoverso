@@ -38,15 +38,18 @@ tiers:
 providers:
 
   alibaba_wan_2_7_plus:
-    display_name: "Alibaba Wan 2.7 Plus (14B)"
+    display_name: "Alibaba Wan 2.7 (text-to-video)"
     modality: video
     access: alibaba_cloud          # DashScope API (Alibaba Cloud Model Studio)
-    model_id: "wan-2.7-plus"
+    # Canonical DashScope model id per the Wan text-to-video API reference:
+    # https://www.alibabacloud.com/help/en/model-studio/text-to-video-api-reference
+    # Wan 2.7 uses the NEW protocol (resolution + ratio parameters, NOT size).
+    model_id: "wan2.7-t2v"
     tier: workhorse
-    role: "final/approved renders for non-hero, non-human shots"
+    role: "final/approved renders for non-hero, non-human shots (higher-fidelity Wan 2.7)"
     cost_per_second_usd: 0.0       # free quota — track budget.alibaba_quota_remaining instead
     quota_metered: true
-    max_duration_s: 8
+    max_duration_s: 10             # Wan 2.7 supports up to 10s per task
     supported_resolutions: ["720p", "1080p"]
     modes:                         # Wan supports multiple generation modes
       t2v: true                    # default — text → video
@@ -71,16 +74,20 @@ providers:
     known_failures: []
 
   alibaba_wan_2_7_turbo:
-    display_name: "Alibaba Wan 2.7 Turbo"
+    display_name: "Alibaba Wan 2.6 (text-to-video)"
     modality: video
     access: alibaba_cloud
-    model_id: "wan-2.7-turbo"
+    # Canonical DashScope model id. Wan 2.6 uses the LEGACY protocol (size parameter).
+    # Kept in the 'turbo' slot as the iteration-tier Wan workhorse: earlier model =>
+    # cheaper on the free quota / faster turnaround / acceptable fidelity for rejected-shot
+    # retries. Promote to wan2.7-t2v (above) for finals.
+    model_id: "wan2.6-t2v"
     tier: workhorse
-    role: "iteration loop + rejected-shot retries (speed-optimized; lower fidelity)"
+    role: "iteration loop + rejected-shot retries (earlier Wan model; cheaper/faster on quota)"
     cost_per_second_usd: 0.0       # free quota
     quota_metered: true
-    max_duration_s: 8
-    supported_resolutions: ["720p"]
+    max_duration_s: 10             # Wan 2.6 accepts duration in {5, 10}
+    supported_resolutions: ["720p", "1080p"]
     modes:
       t2v: true
       i2v: true
@@ -106,7 +113,7 @@ providers:
     display_name: "Kling 2.1 Standard (via fal.ai)"
     modality: video
     access: fal_ai
-    model_id: "kling-video/v2.1/standard/image-to-video"
+    model_id: "fal-ai/kling-video/v2.1/standard/image-to-video"
     tier: workhorse
     role: "human shots — baseline fidelity, cheaper. Default for human shots without refs or end-frame constraints."
     # Kling 2.1 Standard pricing (fal.ai, as of Apr 2026 research):
@@ -141,13 +148,13 @@ providers:
     display_name: "Kling 2.1 Pro (via fal.ai)"
     modality: video
     access: fal_ai
-    model_id: "kling-video/v2.1/pro/image-to-video"
+    model_id: "fal-ai/kling-video/v2.1/pro/image-to-video"
     tier: workhorse
     role: "human shots requiring subject consistency, first+last frame interpolation, or higher motion fidelity"
-    # Kling 2.1 Pro pricing (fal.ai, as of Apr 2026 research):
-    #   $0.45 base for 5s + $0.09 per additional second.
-    cost_per_second_usd: 0.09
-    base_cost_5s: 0.45
+    # Kling 2.1 Pro pricing (fal.ai model page, verified 2026-04-23):
+    #   $0.49 base for 5s + $0.098 per additional second.
+    cost_per_second_usd: 0.098
+    base_cost_5s: 0.49
     max_duration_s: 10
     supported_resolutions: ["720p", "1080p"]
     modes:
@@ -173,10 +180,17 @@ providers:
     display_name: "Google Veo 3.1 Fast"
     modality: video
     access: vertex_ai
+    # Canonical Vertex AI model id — GA since 2025-11-17 (verified 2026-04-23).
+    # The preview id veo-3.1-fast-generate-preview was discontinued 2026-04-02.
+    model_id: "veo-3.1-fast-generate-001"
     tier: specialty
     role: "hero/establishing shots only — 3–5 shots per film"
-    cost_per_second_usd: 0.14
+    # Veo 3.1 Fast: $0.15/s with audio. Disable generateAudio to drop to $0.10/s
+    # (ElevenLabs owns audio in our pipeline, so we always request audio off).
+    cost_per_second_usd: 0.10
     max_duration_s: 8
+    # Veo 3.x accepts only these discrete durations. The adapter must snap.
+    valid_durations_s: [4, 6, 8]
     supported_resolutions: ["720p", "1080p"]
     # Hard spend cap for this provider — the router MUST enforce.
     spend_cap_usd: 15.0
@@ -189,12 +203,15 @@ providers:
       low_motion: 0.95
       stylized: 0.75
       photoreal: 0.95
-      negative_prompt_support: false   # bake negatives into descriptions
+      # Veo 3.1 (and 3.1 Fast) DOES support negativePrompt — corrected vs older
+      # docs. We still keep descriptions self-contained; negatives are additive.
+      negative_prompt_support: true
       image_conditioning: true
       audio_generation: true            # disable; ElevenLabs owns audio
     prompt_grammar: veo_natural_language
     known_failures:
       - "refuses most human-subject prompts; EU restriction — never route humans here"
+      - "policy rejects come back on the completed operation (raiMediaFilteredCount > 0) AND ARE STILL BILLED"
       - "clips wide horizons; specify 'full frame' explicitly"
 
   elevenlabs:

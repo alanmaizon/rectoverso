@@ -97,7 +97,7 @@ def test_single_shot_happy_path(tmp_path: Path) -> None:
         name="router",
         result={
             "provider": "alibaba_wan_27_plus",
-            "model": "wan-2.7-plus",
+            "model": "wan2.7-t2v",
             "rationale": "non-hero non-human -> Wan workhorse",
             "alternates": [],
         },
@@ -188,7 +188,7 @@ def test_single_shot_reject_then_revise_then_approve(tmp_path: Path) -> None:
         name="router",
         result={
             "provider": "alibaba_wan_27_plus",
-            "model": "wan-2.7-plus",
+            "model": "wan2.7-t2v",
             "rationale": "workhorse",
             "alternates": [],
         },

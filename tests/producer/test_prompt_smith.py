@@ -247,7 +247,7 @@ def test_contract_blocks_revision_without_judge_notes(tmp_path) -> None:
             "prompt": {"authored_by": "prompt_smith", "primary": "old"},
             "routing": {
                 "chosen_provider": "alibaba_wan_2_7_plus",
-                "chosen_model": "wan-2.7-plus",
+                "chosen_model": "wan2.7-t2v",
                 "rationale": "x",
                 "decided_by": "router",
                 "decided_at": "2026-04-22T00:00:00Z",
