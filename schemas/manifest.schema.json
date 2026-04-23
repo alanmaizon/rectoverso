@@ -524,7 +524,12 @@
           "additionalProperties": { "type": "number", "minimum": 0 }
         },
         "alibaba_quota_remaining": { "type": "integer", "minimum": 0 },
-        "elevenlabs_credits_remaining": { "type": "integer", "minimum": 0 }
+        "elevenlabs_credits_remaining": { "type": "integer", "minimum": 0 },
+        "editor_estimate_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cached conservative floor estimate for the Editor Managed Agents session cost. Computed once at the first Editor trigger, reused on resume (cache-determinism discipline from CLAUDE.md — resume must not re-estimate to a different number). Optional: absent on pre-Editor manifests; present once the orchestrator has gated at least one Editor dispatch."
+        }
       }
     },
     "runState": {

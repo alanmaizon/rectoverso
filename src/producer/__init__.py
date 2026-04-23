@@ -36,7 +36,15 @@ CLI script). This package provides the atoms those layers compose.
 
 from __future__ import annotations
 
-from .budget import BudgetCheck, BudgetExceeded, check_before_render, record_spend
+from .budget import (
+    BudgetCheck,
+    BudgetExceeded,
+    check_before_editor,
+    check_before_render,
+    ensure_editor_estimate,
+    estimate_editor_cost,
+    record_spend,
+)
 from .dispatch import dispatch
 from .events import EventLog, Event, KINDS, open_event_log
 from .hyperframes import HyperframesTool
@@ -152,6 +160,9 @@ __all__ = [
     "BudgetCheck",
     "BudgetExceeded",
     "check_before_render",
+    "check_before_editor",
+    "ensure_editor_estimate",
+    "estimate_editor_cost",
     "record_spend",
     "FilmOrchestrator",
     "ToolSet",

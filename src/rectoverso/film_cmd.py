@@ -35,6 +35,7 @@ from typing import Any, Mapping
 from src.contracts import ContractViolation
 from src.producer import (
     DispatchFailure,
+    EditorTool,
     ElevenLabsAudioTool,
     FilmOrchestrator,
     FilmResult,
@@ -132,6 +133,17 @@ def add_subparser(subparsers: "argparse._SubParsersAction[Any]") -> None:
         action="store_true",
         help="skip the normalize pre-pass (ToolSet.normalize=None). Editor will see heterogeneous codec inputs.",
     )
+    p.add_argument(
+        "--no-editor",
+        action="store_true",
+        help="skip the Editor trigger entirely (ToolSet.editor=None). film_status stays pending; operator runs editor manually.",
+    )
+    p.add_argument(
+        "--editor-workspace",
+        type=Path,
+        default=Path("artifacts/edit"),
+        help="workspace directory for the Editor Managed Agents session (default: artifacts/edit)",
+    )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_film)
 
@@ -179,6 +191,7 @@ def cmd_film(args: argparse.Namespace) -> int:
             tools=tools,
             retry_policy=retry_policy,
             run_mode=args.run_mode,
+            editor_workspace_dir=args.editor_workspace,
         )
         try:
             film_result = orchestrator.run()
@@ -335,6 +348,26 @@ def _build_toolset(args: argparse.Namespace) -> ToolSet:
 
         normalize_fn = _normalize_fn
 
+    # Editor callable. The real Managed Agents session implementation is
+    # deferred to its own commit (token streaming + tool-call logs + archive
+    # lifecycle) — for now the CLI ships with editor=None, which is a clean
+    # no-op: the orchestrator simply doesn't fire the trigger. Operator gets
+    # film_status=pending with every approved+normalized shot; a follow-up
+    # commit productizes AnthropicManagedAgentsSession and plugs it in here.
+    editor_fn = None
+    if not args.no_editor:
+        # Reserved: once AnthropicManagedAgentsSession lands, this will be:
+        #     session = AnthropicManagedAgentsSession(...)
+        #     editor_tool = EditorTool(session=session)
+        #     def _editor_fn(*, manifest_path, workspace_dir, brief_slice, estimated_cost_usd):
+        #         return editor_tool(None, {
+        #             "manifest_path": manifest_path,
+        #             "workspace_dir": workspace_dir,
+        #             "brief_slice": brief_slice,
+        #             "estimated_cost_usd": estimated_cost_usd,
+        #         })
+        editor_fn = None
+
     return ToolSet(
         render=_render_fn,
         judge=_judge_fn,
@@ -342,6 +375,7 @@ def _build_toolset(args: argparse.Namespace) -> ToolSet:
         generate_ref=_generate_ref_fn,
         audio=audio_fn,
         normalize=normalize_fn,
+        editor=editor_fn,
     )
 
 
@@ -361,6 +395,11 @@ def _result_to_jsonable(r: FilmResult) -> dict:
         "escalations_by_reason": dict(r.escalations_by_reason),
         "audio_status_breakdown": dict(r.audio_status_breakdown),
         "total_audio_credits_used": r.total_audio_credits_used,
+        "editor_status": r.editor_status,
+        "editor_cost_usd": r.editor_cost_usd,
+        "editor_render_path": r.editor_render_path,
+        "editor_render_md5": r.editor_render_md5,
+        "editor_failure_stage": r.editor_failure_stage,
         "total_spent_usd": r.total_spent_usd,
         "total_latency_s": r.total_latency_s,
         "all_landed": r.all_landed,

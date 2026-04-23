@@ -214,6 +214,14 @@ def transition(
 # ---------------------------------------------------------------------------
 
 
+_RECOVERABLE_STATUSES = frozenset({ASSEMBLING, COMPOSE_FAILED})
+
+_RECOVERY_REASON_BY_PRIOR = {
+    ASSEMBLING: "dead_session_recovery",
+    COMPOSE_FAILED: "compose_failed_resume",
+}
+
+
 def recover_on_startup(
     manifest: dict[str, Any],
     *,
@@ -222,13 +230,21 @@ def recover_on_startup(
 ) -> RecoveryReport:
     """Run once at orchestrator construction, before any shot work.
 
-    Behavior:
-        - If film_status == "assembling": dead session. Transition to
-          pending (auto-clears artifacts/edit/), emit a
-          `film_status_transition` event, return a populated RecoveryReport.
-        - If film_status is anything else (pending, composed,
-          compose_failed, absent/legacy): no-op. Returns a RecoveryReport
-          with ran=False.
+    Behavior (two recovery paths, same downstream effect):
+        - film_status == "assembling": dead session (prior run crashed
+          mid-compose). Transition to pending with reason
+          `dead_session_recovery`.
+        - film_status == "compose_failed": operator re-invoked
+          `rectoverso film --resume` on a failed manifest to retry.
+          Transition to pending with reason `compose_failed_resume`.
+          Same dispatch path picks up from there — if upstream is still
+          broken, it fails again; if it was fixed, it succeeds.
+        - Any other state (pending, composed, absent/legacy): no-op.
+
+    In both recovery cases the option-a invariant fires: the transition
+    INTO pending clears artifacts/edit/ so the next Editor session
+    starts from a clean workspace. No special "retry editor" flag —
+    compose_failed and assembling both funnel into the same trigger path.
 
     Does NOT:
         - Auto-re-dispatch the Editor. That's the orchestrator's trigger
@@ -242,7 +258,7 @@ def recover_on_startup(
     time through.
     """
     status = current_status(manifest)
-    if status != ASSEMBLING:
+    if status not in _RECOVERABLE_STATUSES:
         return RecoveryReport(
             ran=False,
             prior_status=status,
@@ -263,7 +279,7 @@ def recover_on_startup(
             payload={
                 "from": prior,
                 "to": PENDING,
-                "reason": "dead_session_recovery",
+                "reason": _RECOVERY_REASON_BY_PRIOR.get(prior, "unspecified"),
                 "cleared_count": cleared_count,
                 "cleared_paths": list(cleared_paths),
             },

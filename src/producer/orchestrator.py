@@ -51,9 +51,25 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
-from .budget import BudgetCheck, BudgetExceeded, check_before_render, record_spend
+from src.contracts import ContractViolation, validate_before_dispatch
+
+from .budget import (
+    BudgetCheck,
+    BudgetExceeded,
+    check_before_editor,
+    check_before_render,
+    ensure_editor_estimate,
+    record_spend,
+)
 from .events import EventLog
-from .film_status import recover_on_startup
+from .film_status import (
+    ASSEMBLING,
+    COMPOSED,
+    COMPOSE_FAILED,
+    PENDING,
+    recover_on_startup,
+    transition,
+)
 from .manifest_io import save_manifest_atomic
 from .orchestrator_types import FilmResult, RetryPolicy, ShotSummary
 
@@ -113,6 +129,25 @@ class NormalizeFn(Protocol):
     def __call__(self, *, shot: dict, attempt_id: int) -> dict: ...
 
 
+class EditorFn(Protocol):
+    """Callable for invoking the Editor Managed Agents session once every
+    trigger condition (film_status=pending, all-shots-approved, all-normalized,
+    all-audio-terminal) is satisfied. Project-level — no shot_id in the
+    signature; receives the manifest path + workspace root. Returns the
+    adapter's result dict (shape: EditorTool's __call__ return — status,
+    composition_path, render_path, render_md5, cost_usd, ...).
+    """
+
+    def __call__(
+        self,
+        *,
+        manifest_path: Path,
+        workspace_dir: Path,
+        brief_slice: Mapping[str, Any],
+        estimated_cost_usd: float,
+    ) -> dict: ...
+
+
 @dataclass
 class ToolSet:
     """Bundle of callables the orchestrator invokes. The real film_cmd.py
@@ -131,6 +166,12 @@ class ToolSet:
     # every approved shot gets a homogenized MP4 at shot.final.normalized_path
     # before the Editor composes.
     normalize: NormalizeFn | None = None
+    # Editor dispatch is optional. When None, the orchestrator never
+    # transitions film_status out of pending — shots land approved +
+    # normalized, and a separate manual Editor run (or a future commit's
+    # wiring) takes over. When wired, _maybe_invoke_editor fires once per
+    # run() when every trigger condition is satisfied.
+    editor: EditorFn | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +197,7 @@ class FilmOrchestrator:
         run_mode: str = "testing",
         now_fn: Callable[[], float] = time.time,
         project_root: Path | None = None,
+        editor_workspace_dir: Path | None = None,
     ) -> None:
         self.manifest = manifest
         self.manifest_path = manifest_path
@@ -170,6 +212,13 @@ class FilmOrchestrator:
         # film_cmd.py (and anything that runs cwd != project_root) passes
         # this explicitly.
         self._project_root = project_root or Path(manifest_path).resolve().parent.parent
+        # Editor's HTML workspace dir. Per editor_agent.md it sits at
+        # artifacts/edit/ under project_root; callers can override for
+        # non-standard layouts. The option-a clear-on-pending invariant
+        # assumes this matches EDIT_ARTIFACTS_RELPATH in film_status.py.
+        self._editor_workspace_dir = (
+            editor_workspace_dir or self._project_root / "artifacts" / "edit"
+        )
         # Per-shot audio stats tracked here (not on the shot, to keep the
         # schema clean). Populated by _maybe_process_audio, read by the
         # summary builders. Keyed by shot_id.
@@ -229,6 +278,11 @@ class FilmOrchestrator:
                 if not self.retry_policy.stop_film_on_budget_halt:
                     halted_reason = None   # continue per policy (not implemented for v1)
 
+        # After the shot loop: fire the Editor trigger once if every
+        # condition is satisfied. Returns None on skip (conditions unmet,
+        # silent — the trigger re-evaluates on the next orchestrator tick).
+        editor_result = self._maybe_invoke_editor()
+
         total_latency = round(self._now() - started, 3)
         return _summarize(
             manifest=self.manifest,
@@ -236,6 +290,7 @@ class FilmOrchestrator:
             summaries=summaries,
             total_latency_s=total_latency,
             halted_reason=halted_reason,
+            editor_result=editor_result,
         )
 
     # -- per-shot inner loop ----------------------------------------------
@@ -676,10 +731,240 @@ class FilmOrchestrator:
             self.manifest_path, self.manifest, last_event_id=last_event_id
         )
 
+    # ------------------------------------------------------------------
+    # Editor trigger — project-level, fires once per run() when ready
+    # ------------------------------------------------------------------
+
+    def _maybe_invoke_editor(self) -> dict | None:
+        """Invoke the Editor Managed Agents session when every trigger
+        condition is satisfied. Returns the dispatch_result dict on fire,
+        None on skip.
+
+        Trigger conditions (all four must hold):
+            1. film_status == "pending"
+            2. Every shot is `approved` — nothing in-flight or escalated
+            3. Every approved shot has final.normalized_path set
+            4. Every dialogue line and SFX cue referenced by an approved
+               shot is terminal (audio_status ∈ {ok, partial, skipped};
+               "pending" means the audio phase hasn't run yet).
+
+        Returns cleanly on skip — negative checks are noise, NOT logged
+        to events.db (silent polling is the right cadence when conditions
+        haven't materialized yet).
+
+        On fire:
+            - Compute + cache `budget.editor_estimate_usd` (first time only)
+            - Budget pre-check against cap_usd; block + log event + keep
+              film_status=pending if over.
+            - Contract validation (audio_to_editor + cd_editor_authority +
+              normalize_to_editor). Block on ContractViolation, log
+              contract_block event, keep film_status=pending.
+            - transition pending → assembling, save atomically.
+            - Emit dispatch_intent event.
+            - Invoke self.tools.editor. Session may be hours-long.
+            - Emit dispatch_result event; project cost_usd into budget.
+            - On ok: write edit.* fields, transition assembling → composed.
+            - On failed: transition assembling → compose_failed. NO auto-retry.
+              Operator path: fix upstream, re-run `rectoverso film --resume`,
+              which runs recover_on_startup (compose_failed → pending w/
+              edit cleared) and falls back into this trigger path.
+        """
+        if self.tools.editor is None:
+            return None
+
+        # ---- Trigger conditions ----
+        skip_reason = self._editor_trigger_skip_reason()
+        if skip_reason is not None:
+            return None   # silent skip — conditions haven't materialized
+
+        # ---- Budget pre-check ----
+        estimate = ensure_editor_estimate(self.manifest)
+        # Persist the cached estimate before gating — so even if the gate
+        # blocks, the cached number is on disk for the next resume.
+        self._save_manifest_after_audio()
+        check = check_before_editor(self.manifest)
+        if not check.allowed:
+            self.events.write(
+                "editor_trigger_blocked",
+                agent="orchestrator",
+                shot_id=None,
+                payload={
+                    "reason": "budget_exceeded",
+                    "rationale": check.rationale,
+                    "estimated_cost_usd": check.estimated_cost_usd,
+                    "projected_spent_usd": check.projected_spent_usd,
+                    "cap_usd": check.cap_usd,
+                },
+            )
+            return None
+
+        # ---- Contract validation ----
+        intent_id_contract = self.events.write(
+            "dispatch_intent",
+            agent="editor_agent",
+            shot_id=None,
+            payload={
+                "provider": "managed_agents",
+                "estimated_cost_usd": estimate,
+                "workspace_dir": str(self._editor_workspace_dir),
+            },
+        )
+        try:
+            validate_before_dispatch(
+                "editor_agent", None, self.manifest, {}
+            )
+        except ContractViolation as exc:
+            self.events.write(
+                "contract_block",
+                agent="editor_agent",
+                shot_id=None,
+                ref_event_id=intent_id_contract,
+                payload={
+                    "violations": [
+                        {
+                            "contract": v.contract.value,
+                            "shot_id": v.shot_id,
+                            "reason": v.reason,
+                        }
+                        for v in exc.violations
+                    ],
+                },
+            )
+            return None
+
+        # ---- Transition pending -> assembling ----
+        transition(self.manifest, ASSEMBLING, project_root=self._project_root)
+        self._save_manifest_after_audio()
+
+        # ---- Dispatch the session ----
+        brief_slice = self._editor_brief_slice()
+        try:
+            result = self.tools.editor(
+                manifest_path=self.manifest_path,
+                workspace_dir=self._editor_workspace_dir,
+                brief_slice=brief_slice,
+                estimated_cost_usd=estimate,
+            )
+        except Exception as exc:
+            # Exception outside the EditorTool's own error handling —
+            # shouldn't happen (EditorTool catches + wraps), but if the
+            # injected callable raises, fail closed: transition to
+            # compose_failed and log.
+            result = {
+                "status": "failed",
+                "failure_stage": "dispatch_raised",
+                "provider": "managed_agents",
+                "mode": "editor_session",
+                "cost_usd": 0.0,
+                "latency_s": 0.0,
+                "stderr_tail": f"{type(exc).__name__}: {exc}"[:500],
+                "transcript_tail": "",
+            }
+
+        # ---- Post-session accounting (both paths) ----
+        actual_cost = float(result.get("cost_usd") or 0.0)
+        if actual_cost > 0:
+            record_spend(
+                self.manifest,
+                provider_id="managed_agents_editor",
+                actual_cost_usd=actual_cost,
+            )
+
+        self.events.write(
+            "dispatch_result",
+            agent="editor_agent",
+            shot_id=None,
+            ref_event_id=intent_id_contract,
+            payload={
+                "provider": "managed_agents",
+                "status": result.get("status"),
+                "failure_stage": result.get("failure_stage"),
+                "composition_path": result.get("composition_path"),
+                "render_path": result.get("render_path"),
+                "render_md5": result.get("render_md5"),
+                "duration_s": result.get("duration_s"),
+                "cost_usd": round(actual_cost, 4),
+                "estimated_cost_usd": estimate,
+                "latency_s": result.get("latency_s"),
+                "transcript_tail": result.get("transcript_tail"),
+                "stderr_tail": result.get("stderr_tail"),
+            },
+        )
+
+        # ---- Transition on outcome ----
+        if result.get("status") == "ok":
+            _project_edit_result(self.manifest, result)
+            transition(self.manifest, COMPOSED, project_root=self._project_root)
+        else:
+            transition(
+                self.manifest, COMPOSE_FAILED, project_root=self._project_root
+            )
+
+        self._save_manifest_after_audio()
+        return result
+
+    # -- editor trigger helpers -----------------------------------------
+
+    def _editor_trigger_skip_reason(self) -> str | None:
+        """Return the first unmet trigger condition, or None if all met."""
+        if self.manifest.get("film_status") != PENDING:
+            return "film_status_not_pending"
+
+        shots = self.manifest.get("shots", []) or []
+        if not shots:
+            return "no_shots"
+        for shot in shots:
+            if shot.get("status") != "approved":
+                return f"shot_{shot.get('shot_id')}_not_approved"
+            final = shot.get("final") or {}
+            if not final.get("normalized_path"):
+                return f"shot_{shot.get('shot_id')}_missing_normalized_path"
+            if shot.get("audio_status") == "pending":
+                # Pending = audio phase hasn't run. Every other value is
+                # terminal (ok/partial/failed/skipped).
+                return f"shot_{shot.get('shot_id')}_audio_pending"
+        return None
+
+    def _editor_brief_slice(self) -> dict[str, Any]:
+        """Minimal read-only slice of the brief passed to the Editor
+        session's initial message. Keeps the kickoff small without hiding
+        semantically important fields."""
+        brief = self.manifest.get("brief") or {}
+        return {
+            "logline": brief.get("logline", ""),
+            "target_duration_s": brief.get("target_duration_s"),
+            "tone": list(brief.get("tone") or []),
+            "genre": brief.get("genre", ""),
+        }
+
 
 # ---------------------------------------------------------------------------
 # Pure helpers (no mutation of the manifest — read-only inspections)
 # ---------------------------------------------------------------------------
+
+
+def _project_edit_result(manifest: dict, result: Mapping[str, Any]) -> None:
+    """Write the Editor's successful dispatch result into manifest.edit.*.
+
+    Matches the edit sub-schema: renderer stays "hyperframes"; populate
+    composition_path, composition_archive_path, render_path, render_md5,
+    total_duration_s, renderer_version, status=approved.
+    """
+    edit_block = manifest.setdefault("edit", {})
+    edit_block["renderer"] = "hyperframes"
+    if result.get("renderer_version"):
+        edit_block["renderer_version"] = str(result["renderer_version"])
+    if result.get("composition_path"):
+        edit_block["composition_path"] = str(result["composition_path"])
+    if result.get("composition_archive_path"):
+        edit_block["composition_archive_path"] = str(result["composition_archive_path"])
+    if result.get("render_path"):
+        edit_block["render_path"] = str(result["render_path"])
+    if result.get("render_md5"):
+        edit_block["render_md5"] = str(result["render_md5"])
+    if result.get("duration_s") is not None:
+        edit_block["total_duration_s"] = float(result["duration_s"])
+    edit_block["status"] = "approved"
 
 
 def _project_audio_result(manifest: dict, shot: dict, result: Mapping[str, Any]) -> None:
@@ -842,6 +1127,7 @@ def _summarize(
     summaries: list[ShotSummary],
     total_latency_s: float,
     halted_reason: str | None,
+    editor_result: dict | None = None,
 ) -> FilmResult:
     approved = sum(1 for s in summaries if s.final_status == "approved")
     escalated = sum(1 for s in summaries if s.final_status == "escalated")
@@ -859,6 +1145,30 @@ def _summarize(
         audio_breakdown[s.audio_status] = audio_breakdown.get(s.audio_status, 0) + 1
         total_audio_credits += s.audio_credits_used
 
+    # Project film_status back into summary fields that the CLI and JSON
+    # output consume. If the editor trigger fired, `editor_result` carries
+    # the dispatch result dict; if it skipped (conditions unmet, no editor
+    # tool wired), the fields stay None/0.0.
+    editor_status: str | None = None
+    editor_cost_usd = 0.0
+    editor_render_path: str | None = None
+    editor_render_md5: str | None = None
+    editor_failure_stage: str | None = None
+    if editor_result is not None:
+        editor_cost_usd = round(float(editor_result.get("cost_usd") or 0.0), 4)
+        editor_render_path = editor_result.get("render_path") or None
+        editor_render_md5 = editor_result.get("render_md5") or None
+        if editor_result.get("status") == "ok":
+            editor_status = "composed"
+        else:
+            editor_status = "compose_failed"
+            editor_failure_stage = editor_result.get("failure_stage")
+
+    # Editor spend counts toward total_spent_usd for the film.
+    total_spent = round(
+        sum(s.total_cost_usd for s in summaries) + editor_cost_usd, 4
+    )
+
     return FilmResult(
         project_id=str(manifest.get("project_id", "")),
         shot_count=len(summaries),
@@ -866,14 +1176,17 @@ def _summarize(
         escalated_count=escalated,
         budget_halted_count=budget_halted,
         failed_count=failed,
-        total_spent_usd=round(
-            sum(s.total_cost_usd for s in summaries), 4
-        ),
+        total_spent_usd=total_spent,
         total_latency_s=round(total_latency_s, 3),
         manifest_path=str(manifest_path),
         shots=tuple(summaries),
         escalations_by_reason=by_reason,
         audio_status_breakdown=audio_breakdown,
         total_audio_credits_used=total_audio_credits,
+        editor_status=editor_status,
+        editor_cost_usd=editor_cost_usd,
+        editor_render_path=editor_render_path,
+        editor_render_md5=editor_render_md5,
+        editor_failure_stage=editor_failure_stage,
         halted_reason=halted_reason,
     )

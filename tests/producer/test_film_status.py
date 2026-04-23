@@ -299,9 +299,11 @@ def test_recover_on_assembling_transitions_and_clears(tmp_path: Path) -> None:
         assert rows[0].payload["cleared_count"] >= 3
 
 
-@pytest.mark.parametrize("status", [PENDING, COMPOSED, COMPOSE_FAILED])
-def test_recover_is_noop_for_non_assembling(status: str, tmp_path: Path) -> None:
-    """Idempotency: recovery on any non-assembling state is a no-op."""
+@pytest.mark.parametrize("status", [PENDING, COMPOSED])
+def test_recover_is_noop_for_terminal_or_pending(status: str, tmp_path: Path) -> None:
+    """Idempotency: recovery on pending or the terminal `composed` is a
+    no-op. (assembling + compose_failed are recoverable — see dedicated
+    tests below.)"""
     seeded = _seed_edit_workspace(tmp_path, files=2)
     m = minimal_manifest()
     m["film_status"] = status
@@ -316,6 +318,29 @@ def test_recover_is_noop_for_non_assembling(status: str, tmp_path: Path) -> None
         # No event emitted
         rows = [e for e in events.recent(limit=10) if e.kind == "film_status_transition"]
         assert len(rows) == 0
+
+
+def test_recover_on_compose_failed_transitions_and_clears(tmp_path: Path) -> None:
+    """Operator-resume path: compose_failed → pending, with edit cleared
+    (option-a) and event emitted with reason='compose_failed_resume'."""
+    seeded = _seed_edit_workspace(tmp_path, files=2)
+    m = minimal_manifest()
+    m["film_status"] = COMPOSE_FAILED
+
+    with open_event_log(tmp_path / "events.db") as events:
+        report = recover_on_startup(m, project_root=tmp_path, events=events)
+        assert report.ran is True
+        assert report.prior_status == COMPOSE_FAILED
+        assert report.new_status == PENDING
+        assert report.cleared_count >= 2
+        for p in seeded:
+            assert not p.exists()
+        assert m["film_status"] == PENDING
+        rows = [e for e in events.recent(limit=10) if e.kind == "film_status_transition"]
+        assert len(rows) == 1
+        assert rows[0].payload["from"] == COMPOSE_FAILED
+        assert rows[0].payload["to"] == PENDING
+        assert rows[0].payload["reason"] == "compose_failed_resume"
 
 
 def test_recover_is_idempotent_on_legacy_manifest(tmp_path: Path) -> None:

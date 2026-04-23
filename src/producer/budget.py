@@ -42,6 +42,13 @@ DEFAULT_SOFT_CAP_RATIO = 0.95      # producer.md § Re-render decision rules ste
 DEFAULT_VEO_PROJECT_CAP_USD = 15.0  # CLAUDE.md § Budget
 VEO_PROVIDER_PREFIXES = ("vertex_veo", "veo_")
 
+# Editor session cost estimate — conservative floor. Shape:
+#   estimate = EDITOR_BASE_COST_USD + (EDITOR_PER_SHOT_USD * approved_shot_count)
+# Ships deliberately-simple; will be tuned with a dialogue/SFX weight after
+# the first live Editor run produces real spend data.
+EDITOR_BASE_COST_USD = 8.0
+EDITOR_PER_SHOT_USD = 0.5
+
 
 @dataclass(frozen=True)
 class BudgetCheck:
@@ -234,6 +241,106 @@ def record_spend(
         )
 
     return budget
+
+
+# ---------------------------------------------------------------------------
+# Editor dispatch budget gate
+# ---------------------------------------------------------------------------
+
+
+def estimate_editor_cost(manifest: Mapping[str, Any]) -> float:
+    """Conservative floor estimate of the Editor Managed Agents session cost.
+
+    Counts only approved shots — the Editor touches those (the pre-dispatch
+    trigger already ensures every shot is approved, but this is pure, so
+    it defensively filters). Shape:
+
+        estimate = EDITOR_BASE_COST_USD + (EDITOR_PER_SHOT_USD * N_approved)
+
+    A 10-shot film → $13. The intent is a pre-flight gate, not an accurate
+    prediction — the real Anthropic-side cost is what lands in
+    `dispatch_result.cost_usd` post-session.
+    """
+    shots = manifest.get("shots", []) or []
+    n_approved = sum(1 for s in shots if s.get("status") == "approved")
+    return round(EDITOR_BASE_COST_USD + EDITOR_PER_SHOT_USD * n_approved, 4)
+
+
+def ensure_editor_estimate(manifest: dict[str, Any]) -> float:
+    """Return `budget.editor_estimate_usd`, computing + caching it on first
+    call. Subsequent calls reuse the cached value — cache-determinism
+    discipline per CLAUDE.md § Prompt caching rationale (resume must not
+    re-estimate to a different number).
+
+    Mutates `manifest["budget"]`. Caller saves the manifest atomically.
+    """
+    budget = manifest.setdefault("budget", {})
+    cached = budget.get("editor_estimate_usd")
+    if cached is not None:
+        return round(float(cached), 4)
+    estimate = estimate_editor_cost(manifest)
+    budget["editor_estimate_usd"] = estimate
+    return estimate
+
+
+def check_before_editor(manifest: Mapping[str, Any]) -> BudgetCheck:
+    """Project whether the Editor dispatch fits within the USD cap.
+
+    Unlike `check_before_render`, this is Anthropic-session scoped:
+    no Veo sub-cap, no quota/credit counters, no creative-driven soft cap.
+    Just hard cap vs. projected spend. The `provider_id` is a synthetic
+    `"managed_agents_editor"` for attribution in events and accounting.
+
+    Caller should ensure_editor_estimate() BEFORE calling this so the
+    estimate is cached; this function does not mutate.
+    """
+    budget = manifest.get("budget", {}) or {}
+    cap = float(budget.get("cap_usd", 0.0))
+    spent = float(budget.get("spent_usd", 0.0))
+    estimate = float(
+        budget.get("editor_estimate_usd")
+        if budget.get("editor_estimate_usd") is not None
+        else estimate_editor_cost(manifest)
+    )
+
+    projected = spent + estimate
+    cap_ratio = projected / cap if cap > 0 else float("inf")
+
+    if cap <= 0:
+        return BudgetCheck(
+            allowed=False,
+            provider_id="managed_agents_editor",
+            estimated_cost_usd=estimate,
+            projected_spent_usd=round(projected, 6),
+            cap_usd=cap,
+            cap_ratio=cap_ratio,
+            rationale=f"budget.cap_usd not configured (cap={cap})",
+        )
+
+    if projected > cap:
+        return BudgetCheck(
+            allowed=False,
+            provider_id="managed_agents_editor",
+            estimated_cost_usd=estimate,
+            projected_spent_usd=round(projected, 6),
+            cap_usd=cap,
+            cap_ratio=round(cap_ratio, 6),
+            rationale=(
+                f"Editor dispatch would breach USD cap: "
+                f"spent ${spent:.4f} + estimate ${estimate:.4f} "
+                f"= projected ${projected:.4f} > cap ${cap:.2f}"
+            ),
+        )
+
+    return BudgetCheck(
+        allowed=True,
+        provider_id="managed_agents_editor",
+        estimated_cost_usd=estimate,
+        projected_spent_usd=round(projected, 6),
+        cap_usd=cap,
+        cap_ratio=round(cap_ratio, 6),
+        rationale="ok",
+    )
 
 
 # ---------------------------------------------------------------------------

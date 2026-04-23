@@ -89,6 +89,18 @@ class FilmResult:
     # Audio phase rollup (orthogonal to shot final_status).
     audio_status_breakdown: dict[str, int] = field(default_factory=dict)
     total_audio_credits_used: int = 0
+    # Editor dispatch rollup (project-level, fires at most once per run).
+    # Values for editor_status:
+    #   None           — trigger never fired (conditions unmet, no editor tool wired,
+    #                    or run halted before the trigger)
+    #   "composed"     — happy path, final MP4 on disk
+    #   "compose_failed" — session ran but agent/infra reported failure
+    #   "blocked"      — budget or contract blocked dispatch; film_status stays pending
+    editor_status: str | None = None
+    editor_cost_usd: float = 0.0
+    editor_render_path: str | None = None
+    editor_render_md5: str | None = None
+    editor_failure_stage: str | None = None
     # Set when the film halted mid-run (budget, dispatch error, etc.)
     halted_reason: str | None = None
 
