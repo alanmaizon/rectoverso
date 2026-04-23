@@ -1,4 +1,4 @@
-# Artistic Pipeline, Deterministic Default
+# Day 3 Research: Artistic Pipeline, Deterministic Default
 
 ## Confirmed Design Shifts
 
