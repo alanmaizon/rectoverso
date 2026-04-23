@@ -87,6 +87,7 @@ def _ok_session_result(
     render_md5: str = "abcdef0123456789abcdef0123456789",
     duration_s: float = 58.5,
     renderer_version: str = "0.4.12",
+    uploaded_sha256: str = "f" * 64,
     cost_usd: float = 9.72,
 ) -> EditorSessionResult:
     return EditorSessionResult(
@@ -100,6 +101,7 @@ def _ok_session_result(
             "render_md5": render_md5,
             "duration_s": duration_s,
             "renderer_version": renderer_version,
+            "uploaded_sha256": uploaded_sha256,
             "notes": "3 render iterations, lint clean",
         },
         cost_usd=cost_usd,

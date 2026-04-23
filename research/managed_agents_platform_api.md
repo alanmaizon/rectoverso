@@ -293,3 +293,160 @@ Revised based on the actual API surface:
 - **Commit 3: `DEMO_MODE` fixture path.** Captured from a live commit-2 run. Replays the event stream + extracted artifacts for deterministic demo-day playback.
 
 Commit 1 costs pennies (minimal tokens on a trivial session). Commits 2 and 3 can slip without blocking the demo if we keep `ToolSet.editor=None` wiring + the sub-film pipeline path we already have.
+---
+
+## Day 5 probe findings (2026-04-23, ~$0.15 actual cost)
+
+Probe at [scratch/managed_agents_editor_probe.py](../scratch/managed_agents_editor_probe.py); report at [scratch/managed_agents_editor_probe/report.json](../scratch/managed_agents_editor_probe/report.json). Session ran on `claude-opus-4-7`, 54s wall time, 6 tool calls, verdict `PARTIAL` (mount call was wrong — see below).
+
+### Q1 — File resource mount: method is `resources.add`, not `resources.create`
+
+The SDK surface is:
+
+```python
+client.beta.sessions.resources.add(
+    session_id,
+    file_id=seed_file.id,
+    type="file",           # Literal["file"]
+    mount_path="/workspace/seed.txt",
+)
+```
+
+Our probe called `.create(...)` and hit `AttributeError`, so the seed file never mounted. The agent correctly reported `/workspace/seed.txt: No such file or directory`. **Q1 bidirectionality remains unverified** — needs a re-probe with the correct method name.
+
+**Additional Files-API finding**: uploaded files are **not downloadable by default**. `client.beta.files.download(seed_file.id)` returned `400 "File 'file_...' is not downloadable"`. This suggests that even if the mount writes through, the SDK's `download` path requires the file to have been uploaded with a specific `purpose`/`downloadable=true` flag (not visible in our SDK version's `upload` signature — likely server-side default). **Implication**: file-resource mount for *write-back* artifact extraction is probably not the intended pattern. The docs-advertised pattern is likely:
+
+- Upload-only for read-into-container (seeds, manifests, reference assets).
+- Agent writes artifacts to a distinct path, we extract via a different mechanism.
+
+**Suspected extraction mechanism** — `client.beta.vaults` is a top-level SDK primitive we didn't see in the docs we fetched. `vaults.credentials` subresource exists. A vault may be the right shape for shared mutable state between host + session. Worth a dedicated probe before productization.
+
+**Working assumption for Editor v1**: agent-side upload via `curl -T` to a signed URL endpoint we stand up. Not elegant; known-working.
+
+### Q2 — `user.define_outcome` schema: `rubric` field is an object, still underspecified
+
+All three probe shapes rejected with structured 400s:
+
+| Shape tried | Error |
+|---|---|
+| `{type, content: [...]}` | `events.0.content: Extra inputs are not permitted` |
+| `{type, rubric: "string"}` | `events.0.rubric: value must be an object` |
+| `{type, outcome: {description}}` | `events.0.outcome: Extra inputs are not permitted` |
+
+Two concrete facts: (a) the field name is `rubric`, (b) it must be an object. The object schema is not discoverable from the SDK — `grep -r outcome|rubric` in `anthropic/` package shows zero hits. The feature is server-side but SDK types lag. The `/managed-agents/outcomes` docs page 404s.
+
+**Decision**: `EDITOR_RESULT:` marker parser stays for v1. Revisit when docs land or a successful shape is reverse-engineered. Candidate next shapes worth trying in a re-probe: `{rubric: {description: str}}`, `{rubric: {criteria: [str]}}`, `{rubric: {type: "text", content: str}}`, `{rubric: {text: str}}`.
+
+### Q3 — Session usage shape: asymmetric, `cache_creation` is an object
+
+```python
+session.usage = {
+    "input_tokens": 12,
+    "output_tokens": 933,
+    "cache_read_input_tokens": 54049,
+    "cache_creation": {
+        "ephemeral_5m_input_tokens": 9966,
+        "ephemeral_1h_input_tokens": 0,
+    },
+}
+```
+
+Unlike `cache_read_input_tokens` (flat int), `cache_creation` is a nested dict with 5m/1h TTL split. Two cache tiers exist: standard 5-minute ephemeral cache (our 9,966 tokens went here) and a 1-hour tier (unused on this probe — likely opt-in).
+
+**Cost formula update** — replace the simple single-tier version in the draft doc with:
+
+```python
+def compute_opus_47_cost(usage) -> float:
+    # Opus 4.7 pricing (verify at platform.claude.com/pricing before productization)
+    u = dict(usage) if not isinstance(usage, dict) else usage
+    cc = u.get("cache_creation") or {}
+    cache_5m = (cc.get("ephemeral_5m_input_tokens") or 0) * 18.75 / 1_000_000  # 1.25x input
+    cache_1h = (cc.get("ephemeral_1h_input_tokens") or 0) * 30.00 / 1_000_000  # 2.0x input (tier estimate)
+    return (
+        u.get("input_tokens", 0) * 15.00 / 1_000_000 +
+        u.get("output_tokens", 0) * 75.00 / 1_000_000 +
+        u.get("cache_read_input_tokens", 0) * 1.50 / 1_000_000 +
+        cache_5m + cache_1h
+    )
+```
+
+Our probe cost: `12*15 + 933*75 + 54049*1.5 + 9966*18.75` / 1M = $0.34. Reasonable for a 54s session with system prompt caching across 7 model requests.
+
+### Bonus findings
+
+- **Container cwd is `/` (root), not `/workspace/`.** `/workspace/` exists but is empty until something mounts or the agent `cd`s there. System prompts must use absolute paths or explicit `cd`.
+- **Platform exposes no env vars to the container** — `env | grep -E '^(ANTHROPIC|CLAUDE|SESSION|AGENT|WORKSPACE)'` returned empty. Session/agent IDs are not self-discoverable inside the container. If we need the agent to reference its own session id, pass it in the kickoff message.
+- **Vaults primitive discovered** (`client.beta.vaults`). Shape: `create(display_name=, metadata=)` + `credentials` subresource + archive/delete lifecycle. Likely the secrets-management primitive for provider API keys (keeps Veo/Kling/ElevenLabs keys out of agent context per Day-1 design). Needs dedicated research before Producer commit.
+- **Resource add signature** for the corrected call:
+  ```python
+  resources.add(session_id, *, file_id: str, type: Literal["file"], mount_path: Optional[str])
+  ```
+- **Events stream consumes tokens via system-prompt re-injection per model call** — our 7 model calls cached 54k tokens (huge ratio vs 12 new input tokens). Caching is the default; the 5m TTL is the relevant window for back-to-back tool loops.
+- **`session.stats`** exists with `active_seconds` (time spent actively working, billable) and `duration_seconds` (wall time). Ratio tells us platform overhead vs agent work: on our probe, 52.977/56.577 = 93.6% active. Efficient.
+
+### Re-probe task list (before Editor productization)
+
+1. Fix `resources.create` → `resources.add` and re-run to answer Q1 bidirectionality cleanly. Also check if `files.upload()` has a `downloadable=true` option we missed.
+2. Try 4 more rubric object shapes for Q2 (candidates listed above). Cost: ~$0.30.
+3. Investigate vaults — create one, attach to a session, see how an agent references the credentials without seeing them. Cost: ~$0.20.
+
+Budget for all three re-probes: ~$1.00 total. Cheap insurance before committing to `AnthropicManagedAgentsSession`.
+
+---
+
+## Day 5 Q1 re-probe — decisive (2026-04-23, $0.30 actual cost)
+
+Probe at [scratch/managed_agents_editor_probe_q1.py](../scratch/managed_agents_editor_probe_q1.py); report at [scratch/managed_agents_editor_probe_q1/report.json](../scratch/managed_agents_editor_probe_q1/report.json), transcript at [scratch/managed_agents_editor_probe_q1/transcript.txt](../scratch/managed_agents_editor_probe_q1/transcript.txt).
+
+### Q1 verdict: FileResource mount does not materialize in the container
+
+The corrected `sessions.resources.add(...)` call is accepted by the API and returns resource IDs — but the mounted files do not appear in the container filesystem.
+
+| Step | Result |
+|---|---|
+| 3 × `files.upload(...)` | all succeed, return `file_...` IDs |
+| 3 × `sessions.resources.add(session_id, file_id=, type="file", mount_path="/workspace/seed_X.txt")` | all succeed, return `sesrsc_...` IDs |
+| Agent runs `ls -la /workspace/` | **empty** — only `.` and `..`, 2 min after session start |
+| 3 × `files.download(file_id)` post-session | all fail with `400 "File '...' is not downloadable"` |
+
+The API-side state is consistent (3 resources attached to the session per the add calls), but the host→container bind-mount portion of the primitive is either unimplemented on the current beta or gated behind an upload flag we haven't discovered. Candidate `purpose` values (`session_input`, `shared_resource`) aren't in the SDK's `files.upload` signature so they were filtered locally — couldn't probe server-side behavior for them without a raw HTTP call.
+
+**This is decisive for our purposes.** We're not going to reverse-engineer the right upload kwargs during hackathon week on a pre-GA feature. The API accepts our calls; the filesystem just doesn't reflect them.
+
+### Agent-side network reachability: confirmed working
+
+Step-4 curl to `https://api.anthropic.com/v1/files` without credentials:
+
+```
+HTTP/2 404
+date: Thu, 23 Apr 2026 21:55:26 GMT
+content-type: application/json
+server: cloudflare
+x-envoy-upstream-service-time: 7
+```
+
+Not a 401, because `/v1/files` isn't the right path for the managed-agents beta — but the TLS handshake succeeded, the request routed through Cloudflare, and hit Anthropic's envoy backend (7ms upstream). **Outbound HTTPS from the container works.** No `ANTHROPIC_*` / `API_KEY` / `CLAUDE_*` env vars are injected (confirmed by step-5 env grep) — the platform does not auto-credential the container.
+
+### Decision for the Editor commit
+
+Skip FileResource entirely for v1. Use the **event stream as the primary output channel**:
+
+1. **Inputs to agent**: embed shot manifest + per-shot metadata as text blocks in the kickoff `user.message`. Small (<100KB), zero mount complexity.
+2. **MP4 artifact extraction**: agent base64-encodes the rendered MP4 and emits it inside an `EDITOR_RESULT: {"mp4_b64": "..."}` envelope in its final message. Viable for the hackathon (30–60s films at typical bitrates stay under 10MB). Producer parses `EDITOR_RESULT` from the final `agent.message` text block.
+3. **Fallback for larger artifacts** (deferred): agent POSTs to a rectoverso-controlled HTTPS endpoint with curl — confirmed reachable.
+
+The `EDITOR_RESULT:` marker parser (already planned for Q2 outcome-scoring) doubles as the artifact-extraction parser. **One parser, one output channel, one protocol.** Simpler than the FileResource round-trip we originally sketched.
+
+### What this saves in `AnthropicManagedAgentsSession`
+
+- No `_attach_resources(shot_manifest)` step — manifest goes in the kickoff message.
+- No `_extract_artifacts()` method crawling mounted paths post-session — artifacts come out of the event stream.
+- ~150 LOC saved vs the resource-mount design.
+
+### Re-probe task list: trimmed
+
+- ~~Re-run Q1 with `resources.add`~~ — done, decisive.
+- Q2 rubric shapes — deferred, marker parser works.
+- Vaults — orthogonal to Editor commit; revisit for Producer provider-credential isolation post-hackathon.
+
+Running total probe spend: $0.64 of $500 Anthropic budget.

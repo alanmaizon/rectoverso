@@ -16,3 +16,11 @@ PyYAML>=6.0
 # is not enough, the requests package must be present too.
 google-auth>=2.25
 requests>=2.31
+
+# Upload endpoint for Editor artifact extraction (src/producer/upload_endpoint.py).
+# Managed Agents sandbox has network egress but no inbound primitives for
+# retrieving container-authored files; the agent curls large artifacts
+# (MP4, composition.zip) to this local Flask endpoint, which ngrok exposes
+# publicly for the duration of a dispatch. Werkzeug ships with Flask and
+# handles the multipart parse without us owning that surface.
+Flask>=3.0

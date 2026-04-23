@@ -1,0 +1,99 @@
+{
+  "started_at": "2026-04-23T21:54:48Z",
+  "model": "claude-opus-4-7",
+  "q1a_upload_variants": [
+    {
+      "variant": "variant_a_no_purpose",
+      "mount_path": "/workspace/seed_a.txt",
+      "kwargs_sent": {},
+      "kwargs_rejected_locally": [],
+      "file_id": "file_011CaMSuv9HVPERam5UroVD7",
+      "upload_ok": true,
+      "content": "SEED_VARIANT_A\n",
+      "mount_ok": true,
+      "resource_id": "sesrsc_011CaMSv9vWfn9VrcpSn1RP2"
+    },
+    {
+      "variant": "variant_b_purpose_session_input",
+      "mount_path": "/workspace/seed_b.txt",
+      "kwargs_sent": {},
+      "kwargs_rejected_locally": [
+        "purpose"
+      ],
+      "file_id": "file_011CaMSuxbNc75AZLMnd9J89",
+      "upload_ok": true,
+      "content": "SEED_VARIANT_B\n",
+      "mount_ok": true,
+      "resource_id": "sesrsc_011CaMSvEEyBtTVzA9EPt8Gq"
+    },
+    {
+      "variant": "variant_c_purpose_shared_resource",
+      "mount_path": "/workspace/seed_c.txt",
+      "kwargs_sent": {},
+      "kwargs_rejected_locally": [
+        "purpose"
+      ],
+      "file_id": "file_011CaMSuzwWfQKiJsYRBKabG",
+      "upload_ok": true,
+      "content": "SEED_VARIANT_C\n",
+      "mount_ok": true,
+      "resource_id": "sesrsc_011CaMSvJhrgkA7v1kRv7gra"
+    }
+  ],
+  "q1b_mounts": [
+    {
+      "variant": "variant_a_no_purpose",
+      "file_id": "file_011CaMSuv9HVPERam5UroVD7",
+      "mount_path": "/workspace/seed_a.txt",
+      "resource_id": "sesrsc_011CaMSv9vWfn9VrcpSn1RP2",
+      "mount_ok": true
+    },
+    {
+      "variant": "variant_b_purpose_session_input",
+      "file_id": "file_011CaMSuxbNc75AZLMnd9J89",
+      "mount_path": "/workspace/seed_b.txt",
+      "resource_id": "sesrsc_011CaMSvEEyBtTVzA9EPt8Gq",
+      "mount_ok": true
+    },
+    {
+      "variant": "variant_c_purpose_shared_resource",
+      "file_id": "file_011CaMSuzwWfQKiJsYRBKabG",
+      "mount_path": "/workspace/seed_c.txt",
+      "resource_id": "sesrsc_011CaMSvJhrgkA7v1kRv7gra",
+      "mount_ok": true
+    }
+  ],
+  "q1c_download_attempts": [
+    {
+      "variant": "variant_a_no_purpose",
+      "file_id": "file_011CaMSuv9HVPERam5UroVD7",
+      "download_ok": false,
+      "error": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': \"File 'file_011CaMSuv9HVPERam5UroVD7' is not downloadable\"}, 'request_id': 'req_011CaMSz1QQF8sDU6xjYose5'}"
+    },
+    {
+      "variant": "variant_b_purpose_session_input",
+      "file_id": "file_011CaMSuxbNc75AZLMnd9J89",
+      "download_ok": false,
+      "error": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': \"File 'file_011CaMSuxbNc75AZLMnd9J89' is not downloadable\"}, 'request_id': 'req_011CaMSz2capf7V2DrLuqckx'}"
+    },
+    {
+      "variant": "variant_c_purpose_shared_resource",
+      "file_id": "file_011CaMSuzwWfQKiJsYRBKabG",
+      "download_ok": false,
+      "error": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': \"File 'file_011CaMSuzwWfQKiJsYRBKabG' is not downloadable\"}, 'request_id': 'req_011CaMSz3WuSPSQ7SFUAy29v'}"
+    }
+  ],
+  "q1d_agent_side_curl": null,
+  "probe_result": null,
+  "transcript_len": 25,
+  "errors": [],
+  "usage": {
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 9777
+    },
+    "cache_read_input_tokens": 34132,
+    "input_tokens": 10,
+    "output_tokens": 1399
+  }
+}

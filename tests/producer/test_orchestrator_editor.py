@@ -101,6 +101,7 @@ def _editor_result_ok(*, cost_usd: float = 11.4, render_md5: str = "a" * 32) -> 
         "render_md5": render_md5,
         "duration_s": 58.3,
         "renderer_version": "0.4.12",
+        "uploaded_sha256": "d" * 64,
         "cost_usd": cost_usd,
         "estimated_cost_usd": 10.0,
         "quota_cost": 0,

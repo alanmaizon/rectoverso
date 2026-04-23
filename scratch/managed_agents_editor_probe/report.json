@@ -1,0 +1,82 @@
+{
+  "started_at": "2026-04-23T21:15:16Z",
+  "model": "claude-opus-4-7",
+  "q1_files_api_bidirectional": {
+    "seed_file_id": "file_011CaMPu6jPyHDVWn5Tf9RzK",
+    "seed_content_before": "SEED_CONTENT_V1\n",
+    "mount_succeeded": false,
+    "mount_error": "AttributeError: 'Resources' object has no attribute 'create'",
+    "download_error": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': \"File 'file_011CaMPu6jPyHDVWn5Tf9RzK' is not downloadable\"}, 'request_id': 'req_011CaMPyNgCpDQo4oBHDeoEz'}"
+  },
+  "q2_user_define_outcome": {
+    "shapes_tried": [
+      {
+        "shape": "shape_content_blocks",
+        "payload": {
+          "type": "user.define_outcome",
+          "content": [
+            {
+              "type": "text",
+              "text": "Success rubric: all four probe steps return exit code 0 and the agent emits a PROBE_RESULT line with verdict=PASS."
+            }
+          ]
+        },
+        "accepted": false,
+        "error_type": "BadRequestError",
+        "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'events.0.content: Extra inputs are not permitted'}, 'request_id': 'req_011CaMPuJhijynfJjPyer6eA'}"
+      },
+      {
+        "shape": "shape_rubric_string",
+        "payload": {
+          "type": "user.define_outcome",
+          "rubric": "Success rubric: all four probe steps return exit code 0 and the agent emits a PROBE_RESULT line with verdict=PASS."
+        },
+        "accepted": false,
+        "error_type": "BadRequestError",
+        "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'events.0.rubric: value must be an object'}, 'request_id': 'req_011CaMPuKAWFqd5jgskbjWzY'}"
+      },
+      {
+        "shape": "shape_outcome_object",
+        "payload": {
+          "type": "user.define_outcome",
+          "outcome": {
+            "description": "Success rubric: all four probe steps return exit code 0 and the agent emits a PROBE_RESULT line with verdict=PASS."
+          }
+        },
+        "accepted": false,
+        "error_type": "BadRequestError",
+        "error": "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'events.0.outcome: Extra inputs are not permitted'}, 'request_id': 'req_011CaMPuKeH7uS6mDF6iGGWm'}"
+      }
+    ]
+  },
+  "q3_session_usage_shape": {
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 9966
+      },
+      "cache_read_input_tokens": 54049,
+      "input_tokens": 12,
+      "output_tokens": 933
+    },
+    "stats": {
+      "active_seconds": 52.977,
+      "duration_seconds": 56.57717212
+    },
+    "status": "idle"
+  },
+  "probe_result": {
+    "verdict": "PARTIAL",
+    "steps_ok": [
+      0,
+      2,
+      3,
+      4
+    ],
+    "pwd": "/",
+    "workspace_exists": true,
+    "notes": "step 1 failed: /workspace existed but was empty \u2014 seed.txt not pre-mounted (No such file or directory). Steps 2 and 3 wrote successfully; step 4 matched no platform env vars (NO_PLATFORM_ENV)."
+  },
+  "transcript_len": 31,
+  "errors": []
+}

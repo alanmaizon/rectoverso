@@ -86,7 +86,59 @@ FAILURE_STAGES = frozenset({
 EDITOR_RESULT_RE = re.compile(r"EDITOR_RESULT:\s*(\{.+\})\s*$", re.MULTILINE | re.DOTALL)
 
 # Required fields in a PASS result — absence → missing_artifacts failure.
-PASS_REQUIRED_FIELDS = ("composition_path", "render_path", "render_md5", "duration_s")
+PASS_REQUIRED_FIELDS = (
+    "composition_path",
+    "render_path",
+    "render_md5",
+    "duration_s",
+    # Integrity check on the HTTPS POST extraction path: the agent echoes
+    # the sha256 returned by the upload endpoint, we cross-check against
+    # the server-side stored bytes. Required on every PASS so no dispatch
+    # claims success without a verifiable artifact.
+    "uploaded_sha256",
+)
+
+
+# ---------------------------------------------------------------------------
+# Typed failure classes for AnthropicManagedAgentsSession (and any future
+# EditorSession implementation). Separating infra / protocol / budget lets
+# the orchestrator retry only the class that's worth retrying and escalate
+# the rest without stringly-matching on reason messages.
+# ---------------------------------------------------------------------------
+
+
+class SessionError(RuntimeError):
+    """Base for all EditorSession runtime failures. Sub-classes carry
+    the failure category so the orchestrator can branch without parsing
+    the message text."""
+
+    failure_kind: str = "unknown"
+
+
+class SessionInfrastructureError(SessionError):
+    """Tunnel won't spawn, Flask port is bound, Anthropic API 5xx — the
+    session never meaningfully started. Orchestrator may retry with
+    backoff. Does NOT burn the dispatch's budget because the agent never
+    ran."""
+
+    failure_kind = "infra"
+
+
+class SessionProtocolError(SessionError):
+    """Agent finished without emitting EDITOR_RESULT, sha256 mismatch
+    between agent-reported and endpoint-recorded, malformed envelope.
+    Orchestrator escalates (don't retry — this is a deterministic agent
+    behavior that will repeat). Budget has been burned."""
+
+    failure_kind = "protocol"
+
+
+class SessionBudgetError(SessionError):
+    """Cumulative session cost projected to breach budget.cap_usd before
+    idle. Orchestrator halts, writes partial state, escalates. No retry
+    possible until operator resolves the budget state."""
+
+    failure_kind = "budget"
 
 
 # ---------------------------------------------------------------------------
@@ -322,10 +374,17 @@ def _build_initial_message(
     workspace_dir: Path,
     brief_slice: Mapping[str, Any],
 ) -> str:
-    """Build the `user.message` that the dispatcher sends to kick the
+    """Build the base `user.message` that the dispatcher sends to kick the
     session. Short, specific, deterministic — the system prompt has the
     composition rules; this message has the paths + the expected final
     line protocol.
+
+    This is a *base* template. The real Managed Agents session
+    (`AnthropicManagedAgentsSession`) appends its own "upload details"
+    section after spawning the ngrok tunnel + upload endpoint, because
+    those values aren't known until the infra is live. Keeping the base
+    template here lets hermetic tests exercise the EditorTool path
+    without needing the session-class infra to be stood up.
 
     The EDITOR_RESULT marker line is how we extract a machine-readable
     verdict from the agent's final text block. Matches the PROBE_RESULT
@@ -334,13 +393,15 @@ def _build_initial_message(
     brief_json = json.dumps(dict(brief_slice), sort_keys=True)
     return (
         f"Assemble the film described in the manifest at {manifest_path}.\n"
-        f"Write all artifacts to {workspace_dir}.\n"
+        f"Write all artifacts under {workspace_dir}/.\n"
         f"Brief excerpt (read-only context): {brief_json}\n"
         "\n"
         "Follow the composition authoring rules in your system prompt.\n"
         "Drive `npx hyperframes lint --json` until errorCount==0 before render.\n"
         "Drive `npx hyperframes render --output out.mp4` to produce the MP4.\n"
-        "After a successful render, build composition.zip (index.html + assets/).\n"
+        "After a successful render, bundle artifacts and upload per the upload\n"
+        "protocol in your system prompt — the Managed Agents session layer will\n"
+        "append the UPLOAD_URL and UPLOAD_TOKEN for this dispatch just below.\n"
         "Every approved shot already has a final.normalized_path — ingest those,\n"
         "NOT final.render_path (codec heterogeneity corrupts concat otherwise).\n"
         "\n"
@@ -349,7 +410,8 @@ def _build_initial_message(
         '    EDITOR_RESULT: {"verdict":"PASS","composition_path":"<rel>",'
         '"composition_archive_path":"<rel>","render_path":"<rel>",'
         '"render_md5":"<hex>","duration_s":<float>,'
-        '"renderer_version":"<x.y.z>","notes":"<short>"}\n'
+        '"renderer_version":"<x.y.z>","uploaded_sha256":"<hex from upload response>",'
+        '"notes":"<short>"}\n'
         "\n"
         '    EDITOR_RESULT: {"verdict":"FAIL","failed_at":"<stage>",'
         '"stderr_tail":"<last 500>","notes":"<short>"}\n'
@@ -448,6 +510,7 @@ def _project_session_result(
         "render_md5": str(payload.get("render_md5") or ""),
         "duration_s": float(payload.get("duration_s") or 0.0),
         "renderer_version": str(payload.get("renderer_version") or ""),
+        "uploaded_sha256": str(payload.get("uploaded_sha256") or ""),
         "agent_notes": str(payload.get("notes") or ""),
         "cost_usd": round(session_result.cost_usd, 4),
         "estimated_cost_usd": estimated,
