@@ -83,7 +83,7 @@ Next session candidates:
 The Producer's orchestration shell is now executable code, and the Tier-3 prompts (Screenwriter, PromptSmith) are written as the read-side consumers of Contracts 2 and 3.
 
 **Producer runtime** ([src/producer/](src/producer/)):
-- [src/producer/types.py](src/producer/types.py) — `Tool` Protocol (the stable adapter interface — matches [RESEARCH_DAY1.md § The Harness Leaves the Container](RESEARCH_DAY1.md)), `DispatchResult`, `DispatchFailure`.
+- [src/producer/types.py](src/producer/types.py) — `Tool` Protocol (the stable adapter interface — matches [scaling_managed_agents.md § The Harness Leaves the Container](scaling_managed_agents.md)), `DispatchResult`, `DispatchFailure`.
 - [src/producer/events.py](src/producer/events.py) — `EventLog` SQLite wrapper at `state/events.db`. Minimal append-only schema (`event_id`, `ts`, `kind`, `agent`, `shot_id`, `ref_event_id`, `payload JSON`), WAL mode, FK constraint enforced. Canonical kinds: `dispatch_intent | contract_block | contract_warn | dispatch_failure | dispatch_result | manifest_saved`.
 - [src/producer/manifest_io.py](src/producer/manifest_io.py) — `load_manifest` (with `was_dirty` detection for interrupted writes), `save_manifest_atomic` (tmpfile + fsync + `os.replace`, schema-validates before disk touch, bumps `run_state.{resumable, last_event_id}` and `updated_at` atomically).
 - [src/producer/dispatch.py](src/producer/dispatch.py) — the one-function wrapper that combines `validate_before_dispatch` + event log + tool call: `dispatch(agent, shot_id, manifest, ctx, tool, events) -> DispatchResult`. Writes intent event, runs contracts (writes `contract_block` event on violation before raising), calls tool (writes `dispatch_failure` event on exception before raising), writes result event. Pure w.r.t. the manifest — caller projects results and saves.
@@ -158,7 +158,7 @@ Deliverables:
 Next: Producer-side adapter to build `ShotSpec` from a manifest shot + write `ProviderChoice` back to `shots[].routing`.
 
 ### 2026-04-22T21:30:00Z — creative-pipeline pivot landed: Creative Director + pair contracts + test spec
-Day-2 research (`RESEARCH_DAY2.md`) reframed the pipeline from deterministic automation to an artistic AI team. Design shifts implemented end-to-end today:
+Day-2 research (`artistic_pipeline.md`) reframed the pipeline from deterministic automation to an artistic AI team. Design shifts implemented end-to-end today:
 
 **New agent — Creative Director (Tier 2, Managed Agent).** [prompts/creative_director.md](prompts/creative_director.md). Reads the film as a whole; writes to `shots[].creative_feedback[]` only. Three invocation triggers: mid-production coherence check (after 3/6/9 shots approved), mandatory pre-Editor full-film review, and tie-breaker for contradictory specialist feedback. Does NOT write `status`, `final`, `artistic_direction`, or `creative_decisions[]` — those stay Producer-owned. Max 3 `mid_production` invocations per project; max 6 feedback entries per invocation.
 

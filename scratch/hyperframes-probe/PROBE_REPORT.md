@@ -97,7 +97,7 @@ Installs five skills to `.agents/skills/` with rich reference material:
 - `website-to-hyperframes` — website-URL → video pipeline
 - `gsap` — GSAP tweens/timelines/easing tailored for Hyperframes
 
-Installation is multi-agent: the installer symlinks skills for Claude Code, Codex, Cursor, Amp, and 20+ others. That's a big "ecosystem" win for our demo narrative — we're using infrastructure designed to work across agent harnesses, which matches the RESEARCH_DAY1 "stable interfaces" principle.
+Installation is multi-agent: the installer symlinks skills for Claude Code, Codex, Cursor, Amp, and 20+ others. That's a big "ecosystem" win for our demo narrative — we're using infrastructure designed to work across agent harnesses, which matches the scaling_managed_agents "stable interfaces" principle.
 
 ---
 

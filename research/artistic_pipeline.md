@@ -1,4 +1,4 @@
-# Day 2 Research: Artistic Pipeline, Not Deterministic
+# Artistic Pipeline, Not Deterministic
 
 ## Confirmed Design Shifts
 

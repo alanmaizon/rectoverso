@@ -13,7 +13,7 @@ The prose version of the contracts (motivation, silent-breakage scenarios) lives
 3. **Fail fast, fail loud.** A blocking violation raises `ContractViolation`. The Producer's event log captures it; the dispatch does not occur.
 4. **Contracts are idempotent checks, not mutations.** If sanitization is required (e.g., filtering stale judge feedback into the CD context), the contract exposes a pure helper that returns a filtered view. The caller applies it explicitly.
 5. **No schema changes.** Every precondition expresses against the current `manifest.schema.json`. If a contract feels like it needs a new schema field, revisit the design before adding one.
-6. **Event-log is the Producer's job, not the contract's.** Contracts are event-free by design — a fresh harness must be able to re-run `validate_before_dispatch` against a recovered manifest and reach the same verdict (matches [RESEARCH_DAY1.md § Session Is Not Claude's Context Window](../RESEARCH_DAY1.md)). The Producer wraps each call: write event → validate → (on block) write failure event + halt; (on warn) append to `history[]`; (on clean) proceed and write dispatch event.
+6. **Event-log is the Producer's job, not the contract's.** Contracts are event-free by design — a fresh harness must be able to re-run `validate_before_dispatch` against a recovered manifest and reach the same verdict (matches [scaling_managed_agents.md § Session Is Not Claude's Context Window](../scaling_managed_agents.md)). The Producer wraps each call: write event → validate → (on block) write failure event + halt; (on warn) append to `history[]`; (on clean) proceed and write dispatch event.
 
 ---
 
@@ -21,7 +21,7 @@ The prose version of the contracts (motivation, silent-breakage scenarios) lives
 
 There is a real tension between two pulls on this design:
 
-- [RESEARCH_DAY2.md](../RESEARCH_DAY2.md) pushes toward **adaptive**: constraint becomes a creative decision; Producer reinterprets rather than halts.
+- [artistic_pipeline.md](../artistic_pipeline.md) pushes toward **adaptive**: constraint becomes a creative decision; Producer reinterprets rather than halts.
 - [prompts/producer.md § Style](../prompts/producer.md) pushes toward **fail loud**: "silent drift is the enemy."
 
 Resolution encoded here: **block only when the silent-breakage scenario produces wrong output without any observable error.** That is, block when downstream agents would succeed superficially but ship a bad result. Use `warn` (log to `history[]`, continue) when the caller has the information needed to recover — typically a mis-set context flag or a sanitizable input.
@@ -30,7 +30,7 @@ Applied:
 - Contracts 1, 2, 3, 5 (film-level), 5 (shot-level higher-priority CD) → `block`. These are the plausible-but-wrong scenarios described in [docs/agents.md § Agent pair contracts](agents.md#agent-pair-contracts).
 - Contracts 4, 5 (shot-level equal-priority CD), 2 (timeout reason), 3 (creative_driven dispatch with no unaddressed CD feedback) → `warn`. These are recoverable by the caller without halting.
 
-Block aligns with the [RESEARCH_DAY1.md](../RESEARCH_DAY1.md) cattle-not-pets discipline: a blocking contract produces a deterministic, recoverable error state (Producer retries with corrected inputs or escalates); a silent success on bad inputs produces a pet — a hand-tended failure that's hard to diagnose because nothing observable went wrong.
+Block aligns with the [scaling_managed_agents.md](../scaling_managed_agents.md) cattle-not-pets discipline: a blocking contract produces a deterministic, recoverable error state (Producer retries with corrected inputs or escalates); a silent success on bad inputs produces a pet — a hand-tended failure that's hard to diagnose because nothing observable went wrong.
 
 ---
 
@@ -52,7 +52,7 @@ Each contract is implemented as one module in `src/contracts/`, named the same a
 
 **Purpose.** Editor must never propose `extend sh_i by +0.3s` or `shorten sh_i by −0.3s` without knowing the audio timing and compressibility on that shot. Without this precondition, Editor can propose a duration change that audio cannot actually deliver (dialogue is already at floor pace), producing a silent loop.
 
-**Research anchor.** Implements the "agents collaborate through the manifest, not via chat" pattern from [RESEARCH_DAY2.md § 3 — Cross-shot Creative Loops](../RESEARCH_DAY2.md) example steps 2–3. Instead of Editor asking Audio "can you compress sh_003 by 0.5s?" and waiting for a reply, Audio writes `compressibility_s` proactively when it produces a take, and Editor reads it. No round-trip; bounded latency.
+**Research anchor.** Implements the "agents collaborate through the manifest, not via chat" pattern from [artistic_pipeline.md § 3 — Cross-shot Creative Loops](../artistic_pipeline.md) example steps 2–3. Instead of Editor asking Audio "can you compress sh_003 by 0.5s?" and waiting for a reply, Audio writes `compressibility_s` proactively when it produces a take, and Editor reads it. No round-trip; bounded latency.
 
 **Dispatch point.** Producer calls `invoke_editor_agent()`. Additionally, any Producer action that applies an Editor-authored `duration_adjust` on shot `i` checks this contract.
 
@@ -108,7 +108,7 @@ require last_attempt.judge_notes is non-empty (len > 0, not whitespace)
 
 **Purpose.** Creative Director writes `creative_feedback[].suggestion` in natural language. PromptSmith does not read `creative_feedback[]` directly — it reads `shots[i].artistic_direction`, which is Producer-authored. The Producer must translate CD's suggestion into a specific `artistic_direction` string before re-dispatching. Otherwise CD's guidance never lands in the render and the re-render looks identical to the one that triggered the complaint.
 
-**Research anchor.** Encodes the loop from [RESEARCH_DAY2.md § 3 — Cross-shot Creative Loops](../RESEARCH_DAY2.md) steps 4–6: "Producer reads decision → asks PromptSmith: 're-author sh_003 prompt with slower pacing'. PromptSmith updates prompt with notes like 'slow, deliberate motion'." This contract makes the "Producer translates" step enforceable; without it the loop visibly runs but silently produces the same output. Also addresses [RESEARCH_DAY2.md § Q4](../RESEARCH_DAY2.md) ("Artistic direction must be baked into every prompt") — binds it to a measurable predicate rather than a prompt-engineering hope.
+**Research anchor.** Encodes the loop from [artistic_pipeline.md § 3 — Cross-shot Creative Loops](../artistic_pipeline.md) steps 4–6: "Producer reads decision → asks PromptSmith: 're-author sh_003 prompt with slower pacing'. PromptSmith updates prompt with notes like 'slow, deliberate motion'." This contract makes the "Producer translates" step enforceable; without it the loop visibly runs but silently produces the same output. Also addresses [artistic_pipeline.md § Q4](../artistic_pipeline.md) ("Artistic direction must be baked into every prompt") — binds it to a measurable predicate rather than a prompt-engineering hope.
 
 **Dispatch point.** Producer issues a re-render with `prompt_revision` starting with the prefix `"creative:"` (matches the creative resolver's convention in `tests/creative/resolver.py:164`).
 
@@ -172,7 +172,7 @@ for each shot i with status == "approved":
 
 **Purpose.** CD and Editor both write to `shots[].creative_feedback[]`. They have different scopes (narrative arc vs. mechanical timing) but at the same priority level they can contradict. CD has authority — `AUTHORITY_ORDER["creative_director"] = 2` in `tests/creative/resolver.py:18-23`. This contract keeps the Producer from dispatching Editor while CD has unresolved same-or-higher-priority objections pending film-wide.
 
-**Research anchor.** Answers [RESEARCH_DAY2.md § Q2](../RESEARCH_DAY2.md) ("How does Producer weigh conflicting feedback? Editor says extend sh_003 vs Audio says compress it — who has final say?"). The resolver answer (priority → authority → cheaper intervention → brief anchor) lives in `tests/creative/resolver.py` and `prompts/producer.md § Aggregating feedback`. This contract pre-empts the conflict: by forcing CD's pre-Editor review to be resolved first, the Editor-CD ping-pong described in the research doc never occurs.
+**Research anchor.** Answers [artistic_pipeline.md § Q2](../artistic_pipeline.md) ("How does Producer weigh conflicting feedback? Editor says extend sh_003 vs Audio says compress it — who has final say?"). The resolver answer (priority → authority → cheaper intervention → brief anchor) lives in `tests/creative/resolver.py` and `prompts/producer.md § Aggregating feedback`. This contract pre-empts the conflict: by forcing CD's pre-Editor review to be resolved first, the Editor-CD ping-pong described in the research doc never occurs.
 
 **Dispatch point.** Before Producer calls `invoke_editor_agent()` at the end of the pipeline. Also before Producer acts on Editor-authored feedback that has a matching-priority CD feedback on the same shot.
 

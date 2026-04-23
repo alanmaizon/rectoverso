@@ -5,7 +5,7 @@ The runtime is deliberately thin:
 
 The `Tool` Protocol is the stable adapter interface between the Producer and
 whatever is on the other end — a Managed Agent session, a subprocess-wrapped
-Messages API call, or a deterministic worker. Per RESEARCH_DAY1.md § The
+Messages API call, or a deterministic worker. Per scaling_managed_agents.md § The
 Harness Leaves the Container, the Producer doesn't care which; it only speaks
 `execute(name, input) -> output`.
 """
@@ -50,18 +50,32 @@ class DispatchResult:
     result_event_id: int
 
 
-@dataclass(frozen=True)
 class DispatchFailure(RuntimeError):
     """Raised when a tool raises during dispatch. The failure event is already
     written to the event log before this is raised — the caller decides whether
-    to retry, reroute, or escalate."""
+    to retry, reroute, or escalate.
 
-    agent: str
-    shot_id: str | None
-    intent_event_id: int
-    failure_event_id: int
-    cause: BaseException = field(repr=False)
+    NOT a frozen dataclass: Python's exception propagation sets `__traceback__`
+    on the raised instance, which a frozen dataclass rejects. Plain class with
+    keyword-only __init__ keeps the field contract explicit.
+    """
 
-    def __str__(self) -> str:  # pragma: no cover - trivial
-        who = f"{self.agent}[{self.shot_id or 'film'}]"
-        return f"dispatch_failure {who}: {self.cause!r} (events {self.intent_event_id}->{self.failure_event_id})"
+    def __init__(
+        self,
+        *,
+        agent: str,
+        shot_id: str | None,
+        intent_event_id: int,
+        failure_event_id: int,
+        cause: BaseException,
+    ) -> None:
+        self.agent = agent
+        self.shot_id = shot_id
+        self.intent_event_id = intent_event_id
+        self.failure_event_id = failure_event_id
+        self.cause = cause
+        who = f"{agent}[{shot_id or 'film'}]"
+        super().__init__(
+            f"dispatch_failure {who}: {cause!r} "
+            f"(events {intent_event_id}->{failure_event_id})"
+        )

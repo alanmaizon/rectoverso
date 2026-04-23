@@ -410,8 +410,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # ---- run (driver) -----------------------------------------------------
     from . import run as _run_mod
+    from . import render_cmd as _render_mod
 
     _run_mod.add_subparser(sub)
+    _render_mod.add_subparser(sub)
 
     # ---- manifest ---------------------------------------------------------
     g_man = sub.add_parser("manifest", help="manifest inspection and validation")

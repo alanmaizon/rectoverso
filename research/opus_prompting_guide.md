@@ -1,4 +1,4 @@
-# Day 0 Research: Opus 4.7 Prompting Guide (10 High-ROI Moves)
+# Opus 4.7 Prompting Guide (10 High-ROI Moves)
 
 A concise set of tactics to extract maximum performance from **Claude Opus 4.7**, especially for engineering, agent workflows, and long-horizon tasks.
 

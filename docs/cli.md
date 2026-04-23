@@ -4,6 +4,98 @@ A read-only, dry-run inspector for the rectoverso pipeline. Every command is saf
 
 Use it to answer: what's in the manifest right now, is it valid, will this hypothetical render fit the budget, which provider would the router pick, do the pair contracts allow this dispatch.
 
+## The `run` subcommand (driver; non-read-only)
+
+`run` is the only subcommand that mutates state. Everything else is read-only inspection. `run` reads a `brief.json`, drives the **Screenwriter → Router → PromptSmith** half of the pipeline, and writes `state/manifest.json` + `state/events.db`. It stops short of Tier-2 agents (Shot Judge, Editor, Audio, Creative Director) and the renderer — by design; this is the upstream half, runnable in under a second under `--dry-run`.
+
+### Brief shape
+
+```jsonc
+{
+  "logline": "A lighthouse keeper at dawn, mist clearing over empty rocks.",
+  "target_duration_s": 30.0,
+  "tone": ["quiet", "solitary"],
+  "genre": "drama",
+  "artistic_style": "naturalistic, cold color palette, handheld",  // optional
+  "allow_artistic_experiments": false                                // optional
+}
+```
+
+Required fields: `logline`, `target_duration_s`, `tone` (non-empty array), `genre`. `source_path` is derived from the brief's file path. Optional fields above are passed through verbatim.
+
+### Two modes
+
+**`--dry-run`** (no network, no cost, deterministic):
+```bash
+./bin/rectoverso run inputs/brief.json --dry-run
+```
+Uses a stub `LLMClient` that branches on system-prompt content. Produces an 8-shot list summing to `target_duration_s` (±5%), 3 hero shots, routed normally through `router/capabilities.yaml`. Token usage reports zero. Perfect for tests and offline demos.
+
+**Live** (Anthropic Messages API, consumes tokens):
+```bash
+./bin/rectoverso run inputs/brief.json
+```
+Reads `ANTHROPIC_API_KEY` from `.env` or the shell environment. Loads the real system prompts from `prompts/screenwriter.md` and `prompts/prompt_smith.md`. Dispatches through `src.producer.dispatch` — so contract validation, event logging, and schema validation on every manifest write all still apply.
+
+### Output
+
+```
+project_id        proj_0f25e9f2
+manifest          state/manifest.json
+shots             8 (target 30.0s, actual 30.0s, within ±5%)
+hero shots        3
+providers:
+  fal_kling_2_1_pro              4
+  vertex_veo_3_1_fast            2
+  alibaba_wan_2_7_plus           2
+usage:
+  screenwriter       in=0 out=0 cache_read=0
+  prompt_smith (sum) in=0 out=0 cache_read=0
+```
+
+Pass `--json` for a machine-readable summary (same fields, JSON shape).
+
+### Flags
+
+- `brief_path` *(positional, required)* — path to `brief.json`
+- `--out PATH` — manifest output (default `state/manifest.json`)
+- `--events-db PATH` — events log (default `state/events.db`)
+- `--capabilities PATH` — router capabilities YAML (default `router/capabilities.yaml`)
+- `--dry-run` — stub LLM client; no Anthropic calls
+- `--json` — structured summary output
+
+### Exit codes (run-specific)
+
+| Code | Meaning |
+|---|---|
+| `0` | Pipeline completed; manifest fully prompted |
+| `2` | Brief file not found |
+| `3` | Brief is malformed JSON, missing required fields, or seeded manifest fails schema validation |
+| `4` | Router `RoutingError` on some shot — no provider survived hard rules |
+| `5` | Dispatch failure (`DispatchFailure` or `ContractViolation` from the Producer runtime) |
+
+### Example end-to-end flow
+
+```bash
+# 1. Dry-run to scaffold and sanity-check the pipeline wiring offline
+./bin/rectoverso run inputs/brief.json --dry-run
+
+# 2. Inspect the scaffolded manifest
+./bin/rectoverso manifest show
+
+# 3. Inspect the event trail
+./bin/rectoverso events tail --limit 50
+
+# 4. Preflight a single shot's router decision and its downstream contracts
+./bin/rectoverso router pick --shot sh_005
+./bin/rectoverso contracts verify --agent renderer --shot sh_005
+
+# 5. Live run with real LLM (will consume tokens)
+./bin/rectoverso run inputs/brief.json
+```
+
+---
+
 ## Invocation
 
 Three equivalent ways to run:

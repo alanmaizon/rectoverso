@@ -1,6 +1,6 @@
 """Creative-loop scenarios — answers "what does a successful creative loop look like?"
 
-Each test is one scenario from `RESEARCH_DAY2.md` turned into an assertion about
+Each test is one scenario from `artistic_pipeline.md` turned into an assertion about
 the Producer's expected behavior. The reference resolver in `resolver.py` is the
 spec; Producer's runtime must produce the same decisions.
 """

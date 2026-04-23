@@ -60,7 +60,9 @@ from .manifest_io import (
     validate_manifest,
 )
 from .prompt_smith import PromptSmithTool
+from .renderer import WanRendererTool
 from .screenwriter import ScreenwriterTool
+from .shot_judge import ShotJudgeTool
 from .types import DispatchFailure, DispatchResult, Tool
 
 __all__ = [
@@ -75,6 +77,8 @@ __all__ = [
     "HyperframesTool",
     "ScreenwriterTool",
     "PromptSmithTool",
+    "WanRendererTool",
+    "ShotJudgeTool",
     "LLMClient",
     "LLMResponse",
     "LLMError",

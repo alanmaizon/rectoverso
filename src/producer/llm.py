@@ -144,8 +144,37 @@ class RealAnthropicClient:
 
 
 def default_client() -> RealAnthropicClient:
-    """Construct a real Anthropic client using the ambient env."""
+    """Construct a real Anthropic client using the ambient env.
+
+    Conveniences for hackathon workflows: if `ANTHROPIC_API_KEY` is missing
+    from the shell env, load it from `<repo-root>/.env` (gitignored). This
+    mirrors how `scratch/real_dispatch_probe.py` and
+    `scratch/managed_agents_hyperframes_probe.py` bootstrap the key.
+    """
+    _ensure_anthropic_api_key()
     return RealAnthropicClient()
+
+
+def _ensure_anthropic_api_key() -> None:
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+    # Walk up from this file to find a .env (repo root sits two levels above
+    # src/producer/llm.py).
+    here = Path(__file__).resolve()
+    for parent in (here.parent, *here.parents):
+        env_path = parent / ".env"
+        if env_path.is_file():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                if k.strip() == "ANTHROPIC_API_KEY":
+                    v = v.strip().strip('"').strip("'")
+                    if v and not v.startswith("<") and v != "your-key-here":
+                        os.environ["ANTHROPIC_API_KEY"] = v
+                        return
+            return  # found a .env but no key — don't keep walking
 
 
 # ---------------------------------------------------------------------------

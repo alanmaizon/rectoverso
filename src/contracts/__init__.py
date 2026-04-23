@@ -36,7 +36,7 @@ Producer responsibilities around each call (contracts are event-free by design):
 
 Contracts do no I/O. A fresh harness can re-run `validate_before_dispatch`
 against a recovered manifest and reach the same verdict — this is the
-"session-as-durable-truth" discipline from RESEARCH_DAY1.md applied locally.
+"session-as-durable-truth" discipline from scaling_managed_agents.md applied locally.
 """
 
 from __future__ import annotations

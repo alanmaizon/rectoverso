@@ -19,7 +19,7 @@ lives elsewhere (out of scope for this skeleton).
 
 KIND values are free-form strings; the skeleton uses a small set (see KINDS
 below) but the table accepts any value so new event types don't require a
-migration. This matches the RESEARCH_DAY1 § Managed Agents ethos of keeping
+migration. This matches the scaling_managed_agents.md § Managed Agents ethos of keeping
 interfaces stable while implementations evolve.
 """
 

@@ -1,0 +1,441 @@
+"""Renderer tool adapters — submit/poll/download video generation jobs.
+
+Tier-4 worker per docs/agents.md § Tier 4. Called synchronously from the
+Producer's dispatch loop; returns once the MP4 has been downloaded to disk.
+
+Scope in this module:
+    - WanRendererTool   — Alibaba Cloud DashScope (free quota; USD=0)
+
+Deliberately out-of-scope (separate modules when they land):
+    - Kling via fal.ai  (paid; $136 budget; two-key failover)
+    - Vertex AI Veo     (paid; $15 hard cap; ADC auth)
+
+All adapters share the same Tool Protocol shape:
+    tool.name == "renderer"
+    tool(shot_id, payload) -> dict
+
+The dict returned maps cleanly into a `dispatch_result` EventLog entry AND
+into a new `shots[i].attempts[-1]` row when the Producer projects it:
+
+    {
+      "status": "ok" | "failed",
+      "provider": "alibaba_wan_2_7_plus",
+      "model": "wan-2.7-plus",
+      "task_id": "<provider task id>",
+      "render_path": "artifacts/renders/sh_003/v1.mp4",
+      "render_md5": "...",
+      "output_size_bytes": 1234567,
+      "cost_usd": 0.0,               # Wan is free-quota; other providers > 0
+      "latency_s": 123.4,            # submit -> MP4 bytes on disk
+      "stdout_tail": "...",          # structured polling log (JSON lines)
+      "stderr_tail": "...",          # populated on failure
+    }
+
+Intent / Architecture / Edge cases:
+    - Intent         : one shot in, one MP4 on disk; determinism is the provider's job
+    - Architecture   : pure urllib (stdlib); no new deps; two-phase submit+poll
+    - Edge cases     : auth missing; submit fail; poll timeout; task FAILED state;
+                       download fail; zero-byte response
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any, Mapping
+
+
+# ---------------------------------------------------------------------------
+# Alibaba Cloud DashScope — Wan text-to-video
+# ---------------------------------------------------------------------------
+#
+# Verified via https://www.alibabacloud.com/help/en/model-studio/text-to-video-api-reference:
+#   POST  https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis
+#   GET   https://dashscope-intl.aliyuncs.com/api/v1/tasks/{task_id}
+# Async pattern: `X-DashScope-Async: enable` → task_id → poll until SUCCEEDED.
+# Signed MP4 URL valid for 24h after SUCCEEDED.
+
+WAN_SUBMIT_URL = (
+    "https://dashscope-intl.aliyuncs.com"
+    "/api/v1/services/aigc/video-generation/video-synthesis"
+)
+WAN_POLL_URL_FMT = "https://dashscope-intl.aliyuncs.com/api/v1/tasks/{task_id}"
+
+# Poll cadence recommended by the DashScope docs.
+DEFAULT_POLL_INTERVAL_S = 15
+DEFAULT_POLL_TIMEOUT_S = 600  # 10 minutes; typical render is 1-5 min
+DEFAULT_HTTP_TIMEOUT_S = 60
+
+
+class WanRendererTool:
+    """DashScope Wan text-to-video adapter.
+
+    Tool Protocol: `name == "renderer"`, `__call__(shot_id, payload) -> dict`.
+
+    Payload fields (supplied by the Producer from the manifest shot):
+        model              : DashScope model id, e.g. "wan-2.7-plus"
+        prompt             : primary prompt text (shot.prompt.primary)
+        negative_prompt    : optional negative prompt
+        duration_s         : integer seconds (Wan takes {5, 10, 15})
+        resolution         : "720p" | "1080p" (default 720p)
+        output_dir         : directory to save artifacts/renders/{shot_id}/
+        attempt_id         : integer (1-indexed; appends to the shot's attempts)
+        seed               : optional int for determinism across runs
+    """
+
+    name = "renderer"
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        submit_url: str = WAN_SUBMIT_URL,
+        poll_url_fmt: str = WAN_POLL_URL_FMT,
+        poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
+        poll_timeout_s: float = DEFAULT_POLL_TIMEOUT_S,
+        http_timeout_s: float = DEFAULT_HTTP_TIMEOUT_S,
+        sleep: Any = time.sleep,
+        urlopen: Any = None,
+    ) -> None:
+        self._api_key = api_key
+        self._submit_url = submit_url
+        self._poll_url_fmt = poll_url_fmt
+        self._poll_interval_s = poll_interval_s
+        self._poll_timeout_s = poll_timeout_s
+        self._http_timeout_s = http_timeout_s
+        self._sleep = sleep
+        # urlopen is injectable for tests — default to urllib.
+        self._urlopen = urlopen or urllib.request.urlopen
+
+    # -- Tool Protocol -----------------------------------------------------
+
+    def __call__(
+        self, shot_id: str | None, payload: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        if shot_id is None:
+            raise ValueError("WanRendererTool requires a shot_id")
+
+        api_key = self._api_key or _resolve_dashscope_key()
+        if not api_key:
+            raise RuntimeError(
+                "DASHSCOPE_API_KEY missing from env and .env; cannot submit Wan job"
+            )
+
+        model = payload["model"]
+        prompt = payload["prompt"]
+        output_dir = Path(payload["output_dir"])
+        attempt_id = int(payload["attempt_id"])
+        negative_prompt = payload.get("negative_prompt") or ""
+        duration_s = int(payload.get("duration_s", 5))
+        resolution = payload.get("resolution", "720p")
+        seed = payload.get("seed")
+
+        # Wan's supported durations per the API docs are {5, 10, 15}. Callers
+        # pass the shot's planned duration; we snap to the nearest legal value
+        # and record the clamp in the result for the audit trail.
+        actual_duration = _snap_duration(duration_s)
+        size = _resolution_to_size(resolution)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"v{attempt_id}.mp4"
+
+        started = time.time()
+        poll_log: list[dict[str, Any]] = []
+
+        # 1) submit
+        body: dict[str, Any] = {
+            "model": model,
+            "input": {"prompt": prompt},
+            "parameters": {
+                "size": size,
+                "duration": actual_duration,
+            },
+        }
+        if negative_prompt:
+            body["input"]["negative_prompt"] = negative_prompt
+        if seed is not None:
+            body["parameters"]["seed"] = int(seed)
+
+        try:
+            submit_resp = self._post_json(
+                self._submit_url,
+                api_key,
+                body,
+                extra_headers={"X-DashScope-Async": "enable"},
+            )
+        except urllib.error.HTTPError as exc:
+            return _failure(
+                stage="submit",
+                started=started,
+                poll_log=poll_log,
+                stderr=_error_body(exc),
+                model=model,
+                attempt_output_name=output_path.name,
+                clamp_note=_clamp_note(duration_s, actual_duration),
+            )
+
+        task_id = submit_resp.get("output", {}).get("task_id")
+        if not task_id:
+            return _failure(
+                stage="submit",
+                started=started,
+                poll_log=poll_log,
+                stderr=f"submit response missing task_id: {submit_resp!r}"[:500],
+                model=model,
+                attempt_output_name=output_path.name,
+                clamp_note=_clamp_note(duration_s, actual_duration),
+            )
+
+        # 2) poll
+        poll_url = self._poll_url_fmt.format(task_id=task_id)
+        deadline = started + self._poll_timeout_s
+        video_url: str | None = None
+        last_status: str | None = None
+
+        while time.time() < deadline:
+            try:
+                poll_resp = self._get_json(poll_url, api_key)
+            except urllib.error.HTTPError as exc:
+                poll_log.append(
+                    {"t": round(time.time() - started, 2), "http_error": exc.code}
+                )
+                self._sleep(self._poll_interval_s)
+                continue
+
+            output = poll_resp.get("output", {})
+            status = output.get("task_status")
+            last_status = status
+            poll_log.append(
+                {"t": round(time.time() - started, 2), "task_status": status}
+            )
+
+            if status == "SUCCEEDED":
+                video_url = output.get("video_url")
+                break
+            if status in ("FAILED", "CANCELED", "UNKNOWN"):
+                return _failure(
+                    stage=f"poll:{status}",
+                    started=started,
+                    poll_log=poll_log,
+                    stderr=(output.get("message") or "")[:500],
+                    model=model,
+                    attempt_output_name=output_path.name,
+                    task_id=task_id,
+                    clamp_note=_clamp_note(duration_s, actual_duration),
+                )
+            self._sleep(self._poll_interval_s)
+
+        if video_url is None:
+            return _failure(
+                stage="poll:timeout",
+                started=started,
+                poll_log=poll_log,
+                stderr=f"task {task_id} did not complete within {self._poll_timeout_s}s "
+                f"(last_status={last_status})",
+                model=model,
+                attempt_output_name=output_path.name,
+                task_id=task_id,
+                clamp_note=_clamp_note(duration_s, actual_duration),
+            )
+
+        # 3) download
+        try:
+            self._download(video_url, output_path)
+        except urllib.error.HTTPError as exc:
+            return _failure(
+                stage="download",
+                started=started,
+                poll_log=poll_log,
+                stderr=_error_body(exc),
+                model=model,
+                attempt_output_name=output_path.name,
+                task_id=task_id,
+                clamp_note=_clamp_note(duration_s, actual_duration),
+            )
+
+        size_bytes = output_path.stat().st_size
+        if size_bytes == 0:
+            return _failure(
+                stage="download:empty",
+                started=started,
+                poll_log=poll_log,
+                stderr=f"downloaded file is 0 bytes: {output_path}",
+                model=model,
+                attempt_output_name=output_path.name,
+                task_id=task_id,
+                clamp_note=_clamp_note(duration_s, actual_duration),
+            )
+
+        md5 = _md5_file(output_path)
+        latency = round(time.time() - started, 3)
+        note = _clamp_note(duration_s, actual_duration)
+
+        return {
+            "status": "ok",
+            "provider": _provider_from_model(model),
+            "model": model,
+            "task_id": task_id,
+            "render_path": str(output_path),
+            "render_md5": md5,
+            "output_size_bytes": size_bytes,
+            "cost_usd": 0.0,  # Wan is free-quota-metered
+            "quota_cost": 1,  # conservative: 1 call = 1 quota unit
+            "latency_s": latency,
+            "requested_duration_s": duration_s,
+            "actual_duration_s": actual_duration,
+            "resolution": resolution,
+            "size": size,
+            "stdout_tail": json.dumps(poll_log)[-500:],
+            "stderr_tail": "",
+            **({"note": note} if note else {}),
+        }
+
+    # -- HTTP helpers ------------------------------------------------------
+
+    def _post_json(
+        self,
+        url: str,
+        api_key: str,
+        body: Mapping[str, Any],
+        *,
+        extra_headers: Mapping[str, str] | None = None,
+    ) -> dict[str, Any]:
+        data = json.dumps(body).encode("utf-8")
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        if extra_headers:
+            headers.update(extra_headers)
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        with self._urlopen(req, timeout=self._http_timeout_s) as resp:
+            raw = resp.read()
+        return json.loads(raw.decode("utf-8"))
+
+    def _get_json(self, url: str, api_key: str) -> dict[str, Any]:
+        req = urllib.request.Request(
+            url,
+            headers={"Authorization": f"Bearer {api_key}"},
+            method="GET",
+        )
+        with self._urlopen(req, timeout=self._http_timeout_s) as resp:
+            raw = resp.read()
+        return json.loads(raw.decode("utf-8"))
+
+    def _download(self, url: str, dest: Path) -> None:
+        with self._urlopen(url, timeout=self._http_timeout_s) as resp, open(
+            dest, "wb"
+        ) as fh:
+            while True:
+                chunk = resp.read(64 * 1024)
+                if not chunk:
+                    break
+                fh.write(chunk)
+
+
+# ---------------------------------------------------------------------------
+# Helpers — module-level, pure
+# ---------------------------------------------------------------------------
+
+
+def _resolve_dashscope_key() -> str | None:
+    """Resolve DASHSCOPE_API_KEY from shell env, then project .env, in that order."""
+    v = os.environ.get("DASHSCOPE_API_KEY")
+    if v:
+        return v
+    here = Path(__file__).resolve()
+    for parent in (here.parent, *here.parents):
+        env_path = parent / ".env"
+        if env_path.is_file():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, vraw = line.partition("=")
+                if k.strip() == "DASHSCOPE_API_KEY":
+                    vraw = vraw.strip().strip('"').strip("'")
+                    if vraw and not vraw.startswith("<"):
+                        return vraw
+            return None
+    return None
+
+
+def _snap_duration(requested_s: int) -> int:
+    """Wan supports {5, 10, 15} seconds. Snap the shot's planned duration
+    to the nearest legal value, rounding down to keep shot boundaries."""
+    for legal in (5, 10, 15):
+        if requested_s <= legal:
+            return legal
+    return 15
+
+
+def _resolution_to_size(resolution: str) -> str:
+    r = resolution.strip().lower()
+    return {"720p": "1280*720", "1080p": "1920*1080"}.get(r, "1280*720")
+
+
+def _provider_from_model(model: str) -> str:
+    """Map DashScope model id to the router's provider_id convention."""
+    if "plus" in model.lower():
+        return "alibaba_wan_2_7_plus"
+    if "turbo" in model.lower():
+        return "alibaba_wan_2_7_turbo"
+    return "alibaba_wan"
+
+
+def _md5_file(path: Path) -> str:
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _error_body(exc: urllib.error.HTTPError) -> str:
+    try:
+        return (exc.read().decode("utf-8", errors="replace"))[:500]
+    except Exception:
+        return f"{exc.code} {exc.reason}"
+
+
+def _clamp_note(requested: int, actual: int) -> str:
+    if requested == actual:
+        return ""
+    return f"duration clamped: requested {requested}s -> actual {actual}s (Wan supports {{5,10,15}})"
+
+
+def _failure(
+    *,
+    stage: str,
+    started: float,
+    poll_log: list[dict[str, Any]],
+    stderr: str,
+    model: str,
+    attempt_output_name: str,
+    task_id: str | None = None,
+    clamp_note: str = "",
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "failed",
+        "failure_stage": stage,
+        "provider": _provider_from_model(model),
+        "model": model,
+        "render_path": "",
+        "render_md5": None,
+        "output_size_bytes": 0,
+        "cost_usd": 0.0,
+        "quota_cost": 0,
+        "latency_s": round(time.time() - started, 3),
+        "stdout_tail": json.dumps(poll_log)[-500:],
+        "stderr_tail": stderr[-500:] if stderr else "",
+    }
+    if task_id:
+        payload["task_id"] = task_id
+    if clamp_note:
+        payload["note"] = clamp_note
+    return payload
