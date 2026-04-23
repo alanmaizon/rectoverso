@@ -38,6 +38,11 @@
       "type": "array",
       "description": "Append-only log of film-level creative pivots (reorders, merges, scope changes, style shifts). Shot-level decisions live in shots[].budget_decision.",
       "items": { "$ref": "#/$defs/creativeDecision" }
+    },
+    "film_status": {
+      "enum": ["pending", "assembling", "composed", "compose_failed"],
+      "default": "pending",
+      "description": "Film-level compose state machine. State transitions (enforced in code via src/producer/film_status.py, NOT by the schema — the schema only enums the value). Valid transitions: pending -> assembling (on Editor dispatch); assembling -> composed (on success); assembling -> compose_failed (on failure); assembling -> pending (dead-session recovery); compose_failed -> pending (operator reset). composed is terminal — any transition out requires operator intervention. INVARIANT (option-a): every transition INTO pending clears artifacts/edit/ so the next Editor session starts from a clean workspace. Missing field = pending (loader migrates legacy manifests)."
     }
   },
   "$defs": {
@@ -189,7 +194,20 @@
           "required": ["render_path", "attempt_id"],
           "properties": {
             "render_path": { "$ref": "#/$defs/relativePath" },
-            "attempt_id": { "type": "integer", "minimum": 1 }
+            "attempt_id": { "type": "integer", "minimum": 1 },
+            "normalized_path": {
+              "$ref": "#/$defs/relativePath",
+              "description": "Homogenized MP4 (1280x720/24fps/h264 High L4.0/yuv420p) produced by NormalizeTool from render_path. Present iff the normalize pre-pass succeeded. Editor reads this when assembling the Hyperframes composition."
+            },
+            "normalized_md5": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$",
+              "description": "MD5 of the normalized MP4. Deterministic under threads=1; enables bit-identical regression snapshots on the final film."
+            }
+          },
+          "dependentRequired": {
+            "normalized_path": ["normalized_md5"],
+            "normalized_md5": ["normalized_path"]
           }
         },
         "status": {

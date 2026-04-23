@@ -34,7 +34,23 @@ def make_shot(
     creative_feedback: list[dict[str, Any]] | None = None,
     artistic_direction: str | None = None,
     final_attempt_id: int | None = None,
+    normalized_path: str | None = None,
+    normalized_md5: str | None = None,
+    unnormalized: bool = False,
 ) -> dict[str, Any]:
+    """Factory for a shot dict used in contract tests.
+
+    When status="approved", the default behavior is to produce an
+    Editor-ready shot — the final block is populated with normalized_path
+    + normalized_md5. This keeps pre-existing editor_agent dispatch tests
+    clean of Contract 6 (normalize_to_editor) noise.
+
+    Opt-outs for tests that exercise specific failure modes:
+      unnormalized=True            — approved shot with final.render_path
+                                     but no normalized_path/normalized_md5
+                                     (the Contract 6 silent-breakage case).
+      status=<non-approved>        — out of Contract 6 scope by definition.
+    """
     shot: dict[str, Any] = {
         "shot_id": shot_id,
         "status": status,
@@ -45,8 +61,34 @@ def make_shot(
     }
     if artistic_direction is not None:
         shot["artistic_direction"] = artistic_direction
+
+    # Build up shot["final"] based on the flags. Four cases:
+    #  (a) final_attempt_id + unnormalized → final has render_path, no normalized_*
+    #  (b) final_attempt_id + normalized_path → both
+    #  (c) status="approved" (default, no final_attempt_id) → auto-populate both
+    #      unless unnormalized=True (no final at all then — approved-without-final)
+    #  (d) non-approved status and no final_attempt_id → no final
     if final_attempt_id is not None:
         shot["final"] = {"render_path": f"artifacts/{shot_id}.mp4", "attempt_id": final_attempt_id}
+        if normalized_path is not None and not unnormalized:
+            shot["final"]["normalized_path"] = normalized_path
+            shot["final"]["normalized_md5"] = normalized_md5 or "f" * 32
+    elif normalized_path is not None and not unnormalized:
+        shot["final"] = {
+            "render_path": f"artifacts/{shot_id}.mp4",
+            "attempt_id": 1,
+            "normalized_path": normalized_path,
+            "normalized_md5": normalized_md5 or "f" * 32,
+        }
+    elif status == "approved" and not unnormalized:
+        # Default Editor-ready shape for approved shots. Tests that want the
+        # approved-without-normalized failure case pass unnormalized=True.
+        shot["final"] = {
+            "render_path": f"artifacts/{shot_id}.mp4",
+            "attempt_id": 1,
+            "normalized_path": f"artifacts/renders/{shot_id}/{shot_id}_norm_v1.mp4",
+            "normalized_md5": normalized_md5 or "f" * 32,
+        }
     return shot
 
 

@@ -53,6 +53,7 @@ from typing import Any, Callable, Mapping, Protocol
 
 from .budget import BudgetCheck, BudgetExceeded, check_before_render, record_spend
 from .events import EventLog
+from .film_status import recover_on_startup
 from .manifest_io import save_manifest_atomic
 from .orchestrator_types import FilmResult, RetryPolicy, ShotSummary
 
@@ -102,6 +103,16 @@ class AudioFn(Protocol):
     def __call__(self, *, shot: dict, cue: dict, attempt_id: int) -> dict: ...
 
 
+class NormalizeFn(Protocol):
+    """Callable for invoking the normalize pre-pass on an approved shot's
+    render. Receives the shot + the attempt_id whose render_path is the
+    source. Returns the adapter's result dict (shape: NormalizeTool's
+    __call__ return — status, output_path, output_md5, ...).
+    """
+
+    def __call__(self, *, shot: dict, attempt_id: int) -> dict: ...
+
+
 @dataclass
 class ToolSet:
     """Bundle of callables the orchestrator invokes. The real film_cmd.py
@@ -114,6 +125,12 @@ class ToolSet:
     # Audio is optional for the orchestrator — when None, the audio phase
     # is skipped entirely (tests that don't care about audio pass None).
     audio: AudioFn | None = None
+    # Normalize pre-pass is optional. When None, the approved shot's raw
+    # render stays the only artifact and the Editor will have to cope with
+    # codec heterogeneity on its own (the pre-wiring state). When wired,
+    # every approved shot gets a homogenized MP4 at shot.final.normalized_path
+    # before the Editor composes.
+    normalize: NormalizeFn | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +155,7 @@ class FilmOrchestrator:
         retry_policy: RetryPolicy | None = None,
         run_mode: str = "testing",
         now_fn: Callable[[], float] = time.time,
+        project_root: Path | None = None,
     ) -> None:
         self.manifest = manifest
         self.manifest_path = manifest_path
@@ -146,10 +164,36 @@ class FilmOrchestrator:
         self.retry_policy = retry_policy or RetryPolicy()
         self.run_mode = run_mode
         self._now = now_fn
+        # project_root is where artifacts/edit/ lives. Conventionally the
+        # manifest sits at <project_root>/state/manifest.json — so we
+        # infer from manifest_path.parent.parent when not supplied.
+        # film_cmd.py (and anything that runs cwd != project_root) passes
+        # this explicitly.
+        self._project_root = project_root or Path(manifest_path).resolve().parent.parent
         # Per-shot audio stats tracked here (not on the shot, to keep the
         # schema clean). Populated by _maybe_process_audio, read by the
         # summary builders. Keyed by shot_id.
         self._audio_stats: dict[str, dict[str, int]] = {}
+
+        # Dead-session recovery: if the prior run died mid-compose
+        # (film_status == "assembling"), transition back to pending and
+        # clear artifacts/edit/ so the next Editor dispatch starts from
+        # a clean workspace. Idempotent — no-op for any other state.
+        # Must run BEFORE any shot work, so the recovered state is visible
+        # throughout this run.
+        report = recover_on_startup(
+            self.manifest,
+            project_root=self._project_root,
+            events=self.events,
+        )
+        if report.ran:
+            # Persist the transition + clear event by saving the manifest
+            # atomically. Keeps on-disk state consistent with in-memory.
+            last_event_id = self.manifest.get("run_state", {}).get("last_event_id", 0)
+            save_manifest_atomic(
+                self.manifest_path, self.manifest, last_event_id=last_event_id
+            )
+        self._recovery_report = report
 
     # -- entry point -------------------------------------------------------
 
@@ -205,9 +249,14 @@ class FilmOrchestrator:
         # resumable: a partially-rendered manifest re-run picks up where it
         # left off without touching approved or escalated shots.
         if shot.get("status") in ("approved", "escalated"):
-            # Resumability hook for audio: an approved shot with
-            # audio_status="pending" still gets its audio phase run. Operator
-            # can edit audio_cues between runs and resume to backfill.
+            # Resumability hook for normalize + audio. Both are at-most-once
+            # per shot per run and both guard internally — calling them on
+            # a fully-processed shot is a no-op. An approved shot with an
+            # empty final.normalized_path still gets normalized here; an
+            # approved shot with audio_status="pending" still gets its
+            # audio phase run. Operator can reset either and resume.
+            if shot.get("status") == "approved":
+                self._maybe_normalize(shot)
             self._maybe_process_audio(shot)
             return _summary_from_existing(
                 shot, shot_started, self._now(),
@@ -297,9 +346,13 @@ class FilmOrchestrator:
             # Re-read attempts after render + judge projected their state.
             new_status = shot.get("status")
             if new_status == "approved":
-                # Audio dispatch happens per-shot, immediately after approval.
-                # Failures here DO NOT demote the shot — audio_status is
-                # tracked separately (see shot.audio_status in the schema).
+                # Post-approval pipeline, in this order:
+                # 1. normalize (video homogenization — writes shot.final.normalized_*)
+                # 2. audio (ElevenLabs SFX + TTS per cue — writes shot.audio_status)
+                # Both are at-most-once per shot per run. Failures in either
+                # do NOT demote the shot; the shot stays approved and the
+                # per-phase status fields carry the partial/failed signal.
+                self._maybe_normalize(shot)
                 self._maybe_process_audio(shot)
                 return _summary_from_existing(
                     shot, shot_started, self._now(),
@@ -392,6 +445,135 @@ class FilmOrchestrator:
                 return
 
     # -- Audio phase -------------------------------------------------------
+
+    def _maybe_normalize(self, shot: dict) -> None:
+        """Run the normalize pre-pass on an approved shot's winning render.
+
+        Writes shot.final.normalized_path + shot.final.normalized_md5 on
+        success. On failure, leaves those fields unset and drops a
+        `normalize_failed` history row — the shot stays approved, and the
+        Editor falls back to render_path (degraded composition quality,
+        but no shot loss).
+
+        Every attempt is logged as a dispatch_intent / dispatch_result
+        (or dispatch_failure) pair in events.db with agent="normalizer",
+        provider="local_ffmpeg", cost_usd=0.0. Keeps the audit trail uniform
+        with render/judge/prompt_smith dispatches.
+
+        Guard-rails:
+        - No-op when self.tools.normalize is None (not wired).
+        - No-op when shot.final.normalized_path is already set (resumability
+          + at-most-once per shot per run).
+        - No-op when shot.final is missing or lacks render_path — caller
+          invariant is that this only fires on approved shots, which must
+          have a final.render_path per the schema's allOf/then clause.
+        """
+        if self.tools.normalize is None:
+            return
+
+        final = shot.get("final") or {}
+        if not final.get("render_path"):
+            return
+        if final.get("normalized_path"):
+            return   # already normalized (resume case)
+
+        shot_id = shot["shot_id"]
+        attempt_id = int(final.get("attempt_id") or 1)
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        intent_id = self.events.write(
+            "dispatch_intent",
+            agent="normalizer",
+            shot_id=shot_id,
+            payload={
+                "provider": "local_ffmpeg",
+                "src_path": final.get("render_path"),
+                "attempt_id": attempt_id,
+            },
+        )
+
+        try:
+            result = self.tools.normalize(shot=shot, attempt_id=attempt_id)
+        except Exception as exc:
+            self.events.write(
+                "dispatch_failure",
+                agent="normalizer",
+                shot_id=shot_id,
+                ref_event_id=intent_id,
+                payload={
+                    "provider": "local_ffmpeg",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc)[:500],
+                    "cost_usd": 0.0,
+                },
+            )
+            shot.setdefault("history", []).append({
+                "ts": now_iso,
+                "event": "normalize_dispatch_error",
+                "by": "normalizer",
+                "detail": f"{type(exc).__name__}: {exc}"[:200],
+            })
+            return
+
+        if result.get("status") == "ok":
+            final["normalized_path"] = _relative_path(result.get("output_path") or "")
+            final["normalized_md5"] = str(result.get("output_md5") or "")
+            shot["final"] = final
+            self.events.write(
+                "dispatch_result",
+                agent="normalizer",
+                shot_id=shot_id,
+                ref_event_id=intent_id,
+                payload={
+                    "provider": "local_ffmpeg",
+                    "status": "ok",
+                    "output_path": final["normalized_path"],
+                    "output_md5": final["normalized_md5"],
+                    "output_size_bytes": int(result.get("output_size_bytes", 0)),
+                    "duration_s": float(result.get("duration_s", 0.0)),
+                    "target_spec": dict(result.get("target_spec") or {}),
+                    "cost_usd": 0.0,
+                    "quota_cost": 0,
+                    "latency_s": float(result.get("latency_s", 0.0)),
+                },
+            )
+            shot.setdefault("history", []).append({
+                "ts": now_iso,
+                "event": "normalized",
+                "by": "normalizer",
+                "detail": (
+                    f"md5={final['normalized_md5'][:8]} "
+                    f"size={result.get('output_size_bytes', 0)} "
+                    f"latency={result.get('latency_s', 0):.2f}s"
+                )[:200],
+            })
+            self._save_manifest_after_audio()   # same atomic-save path
+        else:
+            self.events.write(
+                "dispatch_result",
+                agent="normalizer",
+                shot_id=shot_id,
+                ref_event_id=intent_id,
+                payload={
+                    "provider": "local_ffmpeg",
+                    "status": "failed",
+                    "failure_stage": result.get("failure_stage"),
+                    "stderr_tail": (result.get("stderr_tail") or "")[:500],
+                    "cost_usd": 0.0,
+                    "quota_cost": 0,
+                    "latency_s": float(result.get("latency_s", 0.0)),
+                },
+            )
+            shot.setdefault("history", []).append({
+                "ts": now_iso,
+                "event": "normalize_failed",
+                "by": "normalizer",
+                "detail": (
+                    f"stage={result.get('failure_stage')} "
+                    f"err={(result.get('stderr_tail') or '')[:120]}"
+                )[:200],
+            })
+            self._save_manifest_after_audio()
 
     def _maybe_process_audio(self, shot: dict) -> None:
         """Dispatch each entry in shot.audio_cues once, project results into
@@ -627,6 +809,7 @@ def _summary_from_existing(
         audio_cues_total=int(stats.get("cues_total", len(shot.get("audio_cues") or []))),
         audio_cues_ok=int(stats.get("cues_ok", 0)),
         audio_credits_used=int(stats.get("credits_used", 0)),
+        normalized_render_path=(shot.get("final") or {}).get("normalized_path"),
     )
 
 
@@ -648,6 +831,7 @@ def _escalated_summary(
         audio_cues_total=int(stats.get("cues_total", len(shot.get("audio_cues") or []))),
         audio_cues_ok=int(stats.get("cues_ok", 0)),
         audio_credits_used=int(stats.get("credits_used", 0)),
+        normalized_render_path=(shot.get("final") or {}).get("normalized_path"),
     )
 
 

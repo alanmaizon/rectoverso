@@ -58,6 +58,7 @@ class ContractName(str, Enum):
     CD_TO_PROMPT_SMITH = "cd_to_prompt_smith"
     CD_READS_APPROVED_JUDGE_FEEDBACK = "cd_reads_approved_judge_feedback"
     CD_EDITOR_AUTHORITY = "cd_editor_authority"
+    NORMALIZE_TO_EDITOR = "normalize_to_editor"
 
 
 class Severity(str, Enum):

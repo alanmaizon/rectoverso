@@ -22,7 +22,7 @@ EMPTY_MANIFEST = {
 }
 
 
-def test_all_five_contracts_registered() -> None:
+def test_all_contracts_registered() -> None:
     from src.contracts.registry import _CHECKS
 
     registered = set(_CHECKS.keys())
@@ -32,14 +32,16 @@ def test_all_five_contracts_registered() -> None:
         ContractName.CD_TO_PROMPT_SMITH,
         ContractName.CD_READS_APPROVED_JUDGE_FEEDBACK,
         ContractName.CD_EDITOR_AUTHORITY,
+        ContractName.NORMALIZE_TO_EDITOR,
     }
     assert registered == expected
 
 
-def test_registry_maps_editor_to_audio_and_cd() -> None:
+def test_registry_maps_editor_to_audio_cd_and_normalize() -> None:
     checks = contracts_for_dispatch("editor_agent", {})
     assert ContractName.AUDIO_TO_EDITOR in checks
     assert ContractName.CD_EDITOR_AUTHORITY in checks
+    assert ContractName.NORMALIZE_TO_EDITOR in checks
 
 
 def test_registry_maps_prompt_smith_revision_to_judge_contract() -> None:

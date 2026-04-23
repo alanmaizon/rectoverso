@@ -38,6 +38,7 @@ from src.producer import (
     ElevenLabsAudioTool,
     FilmOrchestrator,
     FilmResult,
+    NormalizeTool,
     PromptSmithTool,
     RetryPolicy,
     ScreenwriterTool,
@@ -125,6 +126,11 @@ def add_subparser(subparsers: "argparse._SubParsersAction[Any]") -> None:
         "--no-audio",
         action="store_true",
         help="skip the audio phase entirely (ToolSet.audio=None)",
+    )
+    p.add_argument(
+        "--no-normalize",
+        action="store_true",
+        help="skip the normalize pre-pass (ToolSet.normalize=None). Editor will see heterogeneous codec inputs.",
     )
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_film)
@@ -298,12 +304,44 @@ def _build_toolset(args: argparse.Namespace) -> ToolSet:
 
         audio_fn = _audio_fn
 
+    # Normalize callable — wraps NormalizeTool. Runs post-approval on the
+    # winning render (shot.final.render_path). Output lands alongside the
+    # source, e.g. artifacts/renders/sh_001/sh_001_norm_v1.mp4. Failure
+    # doesn't demote the shot — the orchestrator's _maybe_normalize logs
+    # and continues.
+    normalize_fn = None
+    if not args.no_normalize:
+        normalize_tool = NormalizeTool()   # resolves ffmpeg via shutil.which
+
+        def _normalize_fn(*, shot: dict, attempt_id: int) -> dict:
+            final = shot.get("final") or {}
+            render_rel = final.get("render_path")
+            if not render_rel:
+                return {
+                    "status": "failed",
+                    "failure_stage": "no_render_path",
+                    "stderr_tail": "shot.final.render_path missing",
+                }
+            # Resolve to absolute. render_path is schema-relative (no leading
+            # /); cwd is the project root under normal operation.
+            render_abs = Path(render_rel)
+            if not render_abs.is_absolute():
+                render_abs = Path.cwd() / render_abs
+            return normalize_tool(shot["shot_id"], {
+                "src_path": render_abs,
+                "output_dir": render_abs.parent,
+                "attempt_id": attempt_id,
+            })
+
+        normalize_fn = _normalize_fn
+
     return ToolSet(
         render=_render_fn,
         judge=_judge_fn,
         revise=_revise_fn,
         generate_ref=_generate_ref_fn,
         audio=audio_fn,
+        normalize=normalize_fn,
     )
 
 
@@ -342,6 +380,7 @@ def _result_to_jsonable(r: FilmResult) -> dict:
                 "audio_cues_total": s.audio_cues_total,
                 "audio_cues_ok": s.audio_cues_ok,
                 "audio_credits_used": s.audio_credits_used,
+                "normalized_render_path": s.normalized_render_path,
             }
             for s in r.shots
         ],

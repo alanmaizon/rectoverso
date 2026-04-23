@@ -61,6 +61,11 @@ class ShotSummary:
     audio_cues_total: int = 0
     audio_cues_ok: int = 0
     audio_credits_used: int = 0
+    # Normalize phase — post-approval pre-pass that homogenizes the render
+    # for Hyperframes. Presence of normalized_render_path indicates success;
+    # None means either didn't run (non-approved shot) or failed
+    # (approved shot stays approved, Editor falls back to raw render).
+    normalized_render_path: str | None = None
 
 
 @dataclass(frozen=True)

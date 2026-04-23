@@ -60,8 +60,29 @@ from .manifest_io import (
     validate_manifest,
 )
 from .audio import ElevenLabsAudioTool, VOICE_PRESETS
+from .editor import (
+    EditorSession,
+    EditorSessionResult,
+    EditorTool,
+    parse_editor_result,
+)
+from .film_status import (
+    ASSEMBLING,
+    COMPOSED,
+    COMPOSE_FAILED,
+    FILM_STATUSES,
+    InvalidTransition,
+    PENDING,
+    RecoveryReport,
+    VALID_TRANSITIONS,
+    clear_edit_artifacts,
+    current_status,
+    recover_on_startup,
+    transition,
+)
 from .kling import KlingRendererTool, encode_image_as_data_uri
 from .nano_banana import NanoBananaImageTool
+from .normalize import NormalizeTool, TargetSpec
 from .orchestrator import FilmOrchestrator, ToolSet
 from .orchestrator_types import FilmResult, RetryPolicy, ShotSummary
 from .prompt_smith import PromptSmithTool
@@ -95,6 +116,24 @@ __all__ = [
     "ShotJudgeTool",
     "ElevenLabsAudioTool",
     "VOICE_PRESETS",
+    "NormalizeTool",
+    "TargetSpec",
+    "EditorTool",
+    "EditorSession",
+    "EditorSessionResult",
+    "parse_editor_result",
+    "PENDING",
+    "ASSEMBLING",
+    "COMPOSED",
+    "COMPOSE_FAILED",
+    "FILM_STATUSES",
+    "VALID_TRANSITIONS",
+    "InvalidTransition",
+    "RecoveryReport",
+    "current_status",
+    "transition",
+    "clear_edit_artifacts",
+    "recover_on_startup",
     "LLMClient",
     "LLMResponse",
     "LLMError",

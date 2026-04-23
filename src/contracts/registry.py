@@ -57,6 +57,7 @@ def contracts_for_dispatch(
         return [
             ContractName.AUDIO_TO_EDITOR,
             ContractName.CD_EDITOR_AUTHORITY,
+            ContractName.NORMALIZE_TO_EDITOR,
         ]
 
     if agent == "creative_director":

@@ -86,11 +86,22 @@ def validate_manifest(
 def load_manifest(path: Path | str) -> LoadResult:
     """Read the manifest from disk. Returns a fresh dict; the on-disk file is
     not held open. Performs schema validation — on failure, raises
-    ManifestValidationError to catch corruption early."""
+    ManifestValidationError to catch corruption early.
+
+    Migrations (in-memory, not persisted on load):
+        - `film_status` missing -> injected as "pending". Legacy manifests
+          from before the compose state machine landed are transparently
+          upgraded. The next atomic save writes it through.
+    """
     p = Path(path)
     with open(p, "r", encoding="utf-8") as f:
         manifest = json.load(f)
     validate_manifest(manifest)
+    # Lazy import to avoid a circular reference (film_status imports EventLog
+    # which imports from this package). Stdlib pattern; keeps the migration
+    # lightweight.
+    from .film_status import migrate as _migrate_film_status
+    _migrate_film_status(manifest)
     was_dirty = not bool(manifest.get("run_state", {}).get("resumable", True))
     return LoadResult(manifest=manifest, was_dirty=was_dirty)
 

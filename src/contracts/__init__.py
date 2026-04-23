@@ -58,6 +58,7 @@ from . import audio_to_editor  # noqa: F401
 from . import cd_editor_authority  # noqa: F401
 from . import cd_reads_approved_judge_feedback  # noqa: F401
 from . import cd_to_prompt_smith  # noqa: F401
+from . import normalize_to_editor  # noqa: F401
 from . import shot_judge_to_prompt_smith  # noqa: F401
 
 
