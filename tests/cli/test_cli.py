@@ -88,6 +88,85 @@ def test_manifest_show_dirty_flag(tmp_path: Path, capsys) -> None:
     assert main(["manifest", "show", str(path)]) == 1  # documented non-zero on dirty
 
 
+# --- manifest migrate-providers -----------------------------------------
+
+
+def test_migrate_providers_dry_run_reports_changes(tmp_path: Path, capsys) -> None:
+    m = minimal_manifest()
+    shot = add_minimal_shot(m, "sh_001")
+    # Stale IDs — provider exists in capabilities.yaml but chosen_model doesn't
+    # match the canonical value.
+    shot["routing"]["chosen_provider"] = "alibaba_wan_2_7_plus"
+    shot["routing"]["chosen_model"] = "wan-2.7-plus"  # invalid — was never real
+    path = _write(tmp_path / "stale.json", m)
+
+    assert main([
+        "manifest", "migrate-providers",
+        "--capabilities", "router/capabilities.yaml",
+        "--dry-run", "--json", str(path),
+    ]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["dry_run"] is True
+    assert len(payload["changed"]) == 1
+    c = payload["changed"][0]
+    assert c["shot_id"] == "sh_001"
+    assert c["from"] == "wan-2.7-plus"
+    assert c["to"] == "wan2.7-t2v"
+
+    # Dry-run must not mutate on disk.
+    on_disk = json.loads(path.read_text())
+    assert on_disk["shots"][0]["routing"]["chosen_model"] == "wan-2.7-plus"
+
+
+def test_migrate_providers_writes_manifest(tmp_path: Path, capsys) -> None:
+    m = minimal_manifest()
+    shot = add_minimal_shot(m, "sh_001")
+    shot["routing"]["chosen_provider"] = "fal_kling_2_1_pro"
+    shot["routing"]["chosen_model"] = "kling-video/v2.1/pro/image-to-video"  # missing fal-ai/ prefix
+    path = _write(tmp_path / "stale.json", m)
+
+    assert main([
+        "manifest", "migrate-providers",
+        "--capabilities", "router/capabilities.yaml",
+        "--json", str(path),
+    ]) == 0
+
+    on_disk = json.loads(path.read_text())
+    routing = on_disk["shots"][0]["routing"]
+    assert routing["chosen_model"] == "fal-ai/kling-video/v2.1/pro/image-to-video"
+    # history should carry an audit row
+    events = [h["event"] for h in on_disk["shots"][0]["history"]]
+    assert "model_id_migrated" in events
+
+
+def test_migrate_providers_is_idempotent(tmp_path: Path, capsys) -> None:
+    m = minimal_manifest()
+    shot = add_minimal_shot(m, "sh_001")
+    # Already canonical — second run should report zero changes.
+    shot["routing"]["chosen_provider"] = "alibaba_wan_2_7_plus"
+    shot["routing"]["chosen_model"] = "wan2.7-t2v"
+    path = _write(tmp_path / "clean.json", m)
+
+    main(["manifest", "migrate-providers", "--capabilities", "router/capabilities.yaml",
+          "--json", str(path)])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["changed"] == []
+
+
+def test_migrate_providers_ignores_unknown_provider(tmp_path: Path, capsys) -> None:
+    m = minimal_manifest()
+    shot = add_minimal_shot(m, "sh_001")
+    shot["routing"]["chosen_provider"] = "future_provider_we_dont_know"
+    shot["routing"]["chosen_model"] = "anything"
+    path = _write(tmp_path / "unknown.json", m)
+
+    main(["manifest", "migrate-providers", "--capabilities", "router/capabilities.yaml",
+          "--json", str(path)])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["changed"] == []
+
+
 # --- budget ---------------------------------------------------------------
 
 

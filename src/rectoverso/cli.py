@@ -27,6 +27,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, is_dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -157,6 +158,74 @@ def cmd_manifest_validate(args: argparse.Namespace) -> int:
         print(json.dumps({"ok": True, "path": str(args.path)}))
     else:
         print(f"ok    {args.path} validates against manifest.schema.json")
+    return 0
+
+
+def cmd_manifest_migrate_providers(args: argparse.Namespace) -> int:
+    """Reconcile `shots[].routing.chosen_model` against router/capabilities.yaml.
+
+    The manifest is persistent but capabilities.yaml is editable — model IDs
+    can drift (e.g. renaming fal.ai Kling endpoints to include the `fal-ai/`
+    prefix mid-project). This command is idempotent: for every shot whose
+    chosen_provider is known to capabilities.yaml, rewrite chosen_model to
+    the YAML's current canonical value, logging each rewrite in history.
+    """
+    from src.router import engine as router_engine
+    from src.producer import save_manifest_atomic, validate_manifest
+
+    load = _load_manifest_or_die(args.path)
+    m = load.manifest
+    caps = router_engine.load_capabilities(args.capabilities)
+
+    changed: list[dict[str, str]] = []
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    for shot in m.get("shots", []):
+        routing = shot.get("routing") or {}
+        provider_id = routing.get("chosen_provider")
+        provider_def = caps.providers.get(provider_id) if provider_id else None
+        if not provider_def:
+            continue
+        canonical = provider_def.get("model_id")
+        if not canonical:
+            continue
+        current = routing.get("chosen_model")
+        if current == canonical:
+            continue
+        routing["chosen_model"] = canonical
+        shot.setdefault("history", []).append(
+            {
+                "ts": ts,
+                "event": "model_id_migrated",
+                "by": "operator",
+                "detail": f"{current!r} -> {canonical!r} (from capabilities.yaml)",
+            }
+        )
+        changed.append(
+            {"shot_id": shot["shot_id"], "from": current or "", "to": canonical}
+        )
+
+    if changed:
+        validate_manifest(m)
+        last_event_id = m["run_state"]["last_event_id"]
+        if not args.dry_run:
+            save_manifest_atomic(args.path, m, last_event_id=last_event_id)
+
+    if args.json:
+        print(json.dumps({
+            "changed": changed,
+            "dry_run": bool(args.dry_run),
+            "path": str(args.path),
+        }, indent=2, sort_keys=True))
+    else:
+        if not changed:
+            print(f"ok    {args.path}: all chosen_model fields already canonical")
+        else:
+            verb = "would rewrite" if args.dry_run else "rewrote"
+            print(f"{verb} {len(changed)} shot(s) against {args.capabilities}:")
+            for c in changed:
+                print(f"  {c['shot_id']:<8}  {c['from']!r} -> {c['to']!r}")
+            if args.dry_run:
+                print("(dry-run — no write)")
     return 0
 
 
@@ -413,11 +482,13 @@ def _build_parser() -> argparse.ArgumentParser:
     from . import render_cmd as _render_mod
     from . import judge_cmd as _judge_mod
     from . import revise_cmd as _revise_mod
+    from . import generate_ref_cmd as _genref_mod
 
     _run_mod.add_subparser(sub)
     _render_mod.add_subparser(sub)
     _judge_mod.add_subparser(sub)
     _revise_mod.add_subparser(sub)
+    _genref_mod.add_subparser(sub)
 
     # ---- manifest ---------------------------------------------------------
     g_man = sub.add_parser("manifest", help="manifest inspection and validation")
@@ -432,6 +503,25 @@ def _build_parser() -> argparse.ArgumentParser:
     p_val.add_argument("path", type=Path, nargs="?", default=DEFAULT_MANIFEST)
     p_val.add_argument("--json", action="store_true")
     p_val.set_defaults(func=cmd_manifest_validate)
+
+    p_mig = man_sub.add_parser(
+        "migrate-providers",
+        help="Rewrite shots[].routing.chosen_model from the current capabilities.yaml (idempotent)",
+    )
+    p_mig.add_argument("path", type=Path, nargs="?", default=DEFAULT_MANIFEST)
+    p_mig.add_argument(
+        "--capabilities",
+        type=Path,
+        default=DEFAULT_CAPABILITIES,
+        help="capabilities.yaml to read canonical model ids from",
+    )
+    p_mig.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report changes without writing the manifest",
+    )
+    p_mig.add_argument("--json", action="store_true")
+    p_mig.set_defaults(func=cmd_manifest_migrate_providers)
 
     # ---- budget -----------------------------------------------------------
     g_bud = sub.add_parser("budget", help="USD cap, quotas, and pre-dispatch projections")

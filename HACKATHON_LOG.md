@@ -9,6 +9,120 @@ Format: `[ISO-timestamp] <tag>: <one-line entry>`. Multi-line notes allowed unde
 
 ## Day 3 — Thu Apr 23
 
+### 2026-04-23T15:00:00Z — Nano-banana (Gemini image gen) landed as Qwen fallback
+
+Second image-gen adapter ships — Google's Gemini image-generation API ("Nano Banana", `gemini-2.5-flash-image`) plugs in behind the same `name="image_generator"` Tool Protocol as Qwen-Image, so `generate-ref` can switch between them behind a `--provider` flag. Auto-fallback mode tries Qwen first and falls through to nano-banana on content-policy refusals (where a different filter surface might pass).
+
+**NanoBananaImageTool** ([src/producer/nano_banana.py](src/producer/nano_banana.py)) — Gemini **Developer API** path (not Vertex), `x-goog-api-key` header auth, sync request/response (no polling — image is inline base64 in the first response, typically 3–8s). Lazily picks up `GEMINI_KEY` / `GEMINI_API_KEY` / `GOOGLE_API_KEY` from env + .env walk. Body format is Gemini's `contents`/`parts` shape with `generationConfig.responseModalities: ["IMAGE"]` + `imageConfig.aspectRatio`. Negative prompt has no native field on Gemini image gen, so the adapter folds it into the prompt text as `"Avoid: ..."`. Accepts both camelCase `inlineData` and snake_case `inline_data` responses to survive SDK drift. No `seed` support (Gemini doesn't expose one for image gen as of Apr 2026) — the payload field is accepted for interface parity with Qwen but silently ignored.
+
+Cost tiers the adapter knows:
+- `gemini-2.5-flash-image` (original Nano Banana): **$0.039/image** (default)
+- `gemini-3.1-flash-image-preview` (Nano Banana 2): **$0.045/image**
+- `gemini-3-pro-image-preview` (Nano Banana Pro): **$0.134/image**
+
+Content-policy surfaces in three places and all map to `failure_stage="content_policy"`: `promptFeedback.blockReason` (pre-generation block), `candidates[0].finishReason` in `{SAFETY, PROHIBITED_CONTENT, BLOCKLIST, RECITATION}` (post-generation block), or an HTTP 400 whose body contains "blocked"/"safety"/"prohibited" (request-level block). Non-content failures classify to `auth` / `rate_limit` / `validation` / `submit:http_{code}`.
+
+**`generate-ref --provider {qwen|nano-banana|auto}`**: default is `auto`, which runs the plan `[qwen, nano-banana]`. Fall-through fires **only** on `failure_stage="content_policy"` — all other failures (auth/rate-limit/validation) return immediately because a second adapter won't fix an API-key problem. History rows attribute the generation to the adapter's self-reported provider name (`dashscope_qwen_image` vs `gemini_nano_banana`), and the `detail` column carries a `provider=...` / `fallback_from=...` breadcrumb for post-hoc audit.
+
+**Live test on sh_008** (scene-2 closer — keeper reaching for lighthouse door):
+- Adapter: nano-banana explicit (`--provider nano-banana`)
+- Latency: **6.6s**, cost $0.039
+- Result: keeper in dark coat, back three-quarters to camera, reaching for a weathered lighthouse door, enveloped in grey mist. Matches prompt intent on the first call, no retry. MD5 `8372c6b10baa399c492a6b28af484cf5`, saved at `artifacts/refs/sh_008_v1.png`.
+
+Both image generators now validated against real APIs. Qwen produced an unexpected lighthouse-in-background composition for sh_006 (strong but drifted from the prompt on lighthouse presence). Nano-banana produced a tighter door-and-keeper framing that strictly matches the prompt. Both are useful: Qwen's tendency to add environmental context can help establish scene; nano-banana's literalism helps when composition needs to stay narrow.
+
+**Tests**: +25 new (403/403 total).
+- [tests/producer/test_nano_banana.py](tests/producer/test_nano_banana.py) — 21: happy path + API-key header + body shape (contents/parts + responseModalities + imageConfig.aspectRatio), Pro model cost, camelCase AND snake_case inline data parsing, missing key, unsupported aspect, three content-policy surfaces (promptFeedback.blockReason / finishReason=SAFETY / finishReason=PROHIBITED_CONTENT), no candidates, no inline image, 400 validation vs 400-with-safety-message, 401 auth, 429 rate limit, base64 decode failure, pure helpers (`_compose_prompt`, `_cost_for`, `_submit_failure_stage`, `BLOCKED_FINISH_REASONS`).
+- [tests/cli/test_generate_ref.py](tests/cli/test_generate_ref.py) — 4 new: `--provider nano-banana` (explicit routing), `--provider auto` falls back on content_policy, auto does NOT fall back on rate_limit, auto both-refuse returns content_policy and attributes final failure to nano-banana.
+
+**Remaining**:
+- Gemini nano-banana cost NOT yet recorded against the budget ledger (the generate-ref command doesn't call `record_spend` on image gen yet — same gap as Qwen). Non-urgent since Gemini charges are far under any budget cap, but the audit trail is incomplete.
+- Router doesn't know about image generators yet — `--provider auto` is hardcoded in the CLI. A capabilities.yaml entry per image provider would let the router also make content-aware choices (e.g., auto → Qwen for environmental scenes, nano-banana for human-likeness).
+
+### 2026-04-23T14:15:00Z — Day-4 gap closed ahead of schedule: Qwen-Image ref generator + manifest migration tool + dep pins
+
+Cleared the three remaining items from the previous session and walked straight into Day-4 territory.
+
+**requirements.txt** (new, at repo root) pins runtime deps: `anthropic>=0.96`, `jsonschema>=4.20`, `PyYAML>=6.0`, `google-auth>=2.25`, `requests>=2.31`. `google-auth` is the Veo ADC path; `requests` is the transport `google.auth.transport.requests` depends on — installing `google-auth` alone is not enough, which cost us ~90 seconds of debugging during the Veo live-test earlier. Test deps stay in `tests/requirements.txt`.
+
+**`rectoverso manifest migrate-providers`** ([src/rectoverso/cli.py](src/rectoverso/cli.py) `cmd_manifest_migrate_providers`) — idempotent normalizer that rewrites `shots[].routing.chosen_model` to match whatever `router/capabilities.yaml` currently declares for that shot's `chosen_provider`. Dry-run flag, JSON output, appends a `model_id_migrated` history row on every rewrite. Motivation was the Kling `fal-ai/` prefix drift between my in-session YAML fix and manifests generated before it. The tool caught more drift than expected: on the `/tmp/rv-live` manifest it rewrote 7 shots — Veo shots had `provider_id` in the `chosen_model` slot (router bug: model_id was never populated, fell back to the provider_id), sh_003 was on Wan 2.6 Turbo despite Plus routing (YAML-level drift), sh_005 had `wan-2.7-plus` which was never a real DashScope ID. Same pattern will absorb any future YAML rename (nano-banana swaps, Veo version bumps, Kling 2.5 upgrade).
+
+**QwenImageTool** ([src/producer/qwen_image.py](src/producer/qwen_image.py)) — DashScope Qwen-Image text-to-image adapter. `qwen-image-plus` model (async-capable, distilled from the `max` family; the `2.0`/`2.0-pro` variants are sync-only and don't fit our task pattern). Endpoint `https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis`, identical auth + polling pattern to Wan (both are DashScope → 90% of the adapter is a copy-paste of the Wan submit/poll loop with different payload fields). Sizes are asterisk-delimited (`1664*928` for 16:9 — no native 1280×720), `prompt_extend: false` forced to keep determinism, `watermark: false` forced so Kling doesn't animate a DashScope watermark into the subject. Content policy failures (`DataInspectionFailed`, `InvalidParameter.Prompt`) map to `failure_stage="content_policy"` and are non-retryable; plain HTTP errors classify to `auth`, `rate_limit`, or `validation`.
+
+**`rectoverso generate-ref --shot <id>`** ([src/rectoverso/generate_ref_cmd.py](src/rectoverso/generate_ref_cmd.py)) — the command that closes the Day-4 gap. Composes a still-frame image prompt from the shot description + brief style anchors (cold color palette, naturalistic, tone words), runs Qwen-Image, saves the PNG to `artifacts/refs/{shot_id}_v{n}.png`, appends the path to `shot.prompt.reference_subject_paths[]` so the next `rectoverso render` picks it up via `_kling_image_url`. Additive: does NOT overwrite the video prompt. History row `reference_generated` carries the audit. `--prompt-override` bypasses composition when the operator has a specific visual in mind. `--seed` for reproducibility.
+
+**Live-test — Day-3's Kling failure mode fixed with concrete evidence**:
+
+| sh_006 attempt | reference image | judge score | prompt_adherence | verdict |
+|---|---|---|---|---|
+| prior session, stale ref (sh_003 keyframe) | empty forest path, no human | 0.650 | **0.25** | rejected — "figure never appears" |
+| **this session, Qwen-generated** | **keeper in dark coat, back to camera, misty forest path, lighthouse bg** | **0.757** | 0.55 | **approved** |
+
+Qwen produced the reference in 5.8s at 1664×928; the image itself is striking — solitary figure walking down a path with a lighthouse visible through mist, exactly matching the brief's logline and artistic anchors. Kling 2.1 Pro took that frame, animated it into a walking motion in 80s, and Shot Judge approved. The `reference_subject_paths` glue between the two adapters (`_kling_image_url` in render_cmd auto-encodes the local PNG as a data URI for fal's `image_url` field) means the full composition *works end-to-end with no manual fallback*. Pipeline remains:
+
+    brief → router → prompt → (if Kling) generate-ref → Qwen → ref image → render → judge → approved
+
+Score of 0.757 is just above the 0.75 approve threshold. The judge's lower prompt_adherence score (0.55) correctly flags that the Qwen ref introduced a lighthouse which the video prompt didn't mention — a seed-vs-prompt mismatch, not an adapter bug. Two possible follow-ups: (1) write image prompts that exclude scene elements not in the video prompt, or (2) have PromptSmith update the video prompt after Qwen produces a ref, so they agree. Neither is required to unblock human shots.
+
+**Final state on `/tmp/rv-live`**: 3 of 8 shots approved across all three providers — sh_001 Veo 0.917 ($0.40), sh_003 Wan 0.907 (free, retry loop winner), sh_006 Kling 0.757 ($0.98 for two attempts = rejected + approved). Spend $1.38 / $151. Wan quota 70/72.
+
+**Tests**: +28 new (378/378 total).
+- [tests/producer/test_qwen_image.py](tests/producer/test_qwen_image.py) — 17: happy path, submit body shape (X-DashScope-Async header, size/prompt_extend/watermark params), all 5 aspect ratios map, missing key, content policy on FAILED task, 400 with/without DataInspectionFailed, 429, 401, poll timeout, missing task_id, missing results url, zero-byte download, pure helpers.
+- [tests/cli/test_generate_ref.py](tests/cli/test_generate_ref.py) — 7: ok projects path into reference_subject_paths, composed prompt pulls from shot+brief, prompt-override, appends to existing refs, missing manifest/shot, failure logs `reference_failed`.
+- [tests/cli/test_cli.py](tests/cli/test_cli.py) — 4 new: migrate-providers dry-run, commits, is idempotent, ignores unknown providers.
+
+**Known remaining**:
+- Qwen ref + Kling video prompt can drift on scene content (the lighthouse appeared in the ref, not in the prompt). Consider having `generate-ref` feed the Qwen `actual_prompt` back into `shot.prompt.primary` as context, or having `rectoverso revise` auto-trigger after a new ref lands.
+- Image-quota counter (`budget.dashscope_image_quota_remaining`) not yet schema-integrated — DashScope image free quota is separate from Wan video quota. Non-urgent for the $500 Anthropic budget envelope since image gen is free-tier for us.
+- Router outputs `chosen_model = chosen_provider` for Veo (bug — model should pull from capabilities.yaml `model_id`). Migration tool papers over it post-hoc, but the router should populate it correctly in the first place.
+
+### 2026-04-23T12:30:00Z — Full pipeline validated live: Veo + Wan + Kling adapters, retry loop, Hyperframes editor path
+
+All three Tier-4 renderer adapters wired, live-tested against their real APIs, and their outputs assembled into a final Hyperframes MP4. This is the first end-to-end execution of the whole spine: brief → router → prompt → render → judge → revise → re-render → re-judge → approved → assemble → MP4 on disk with budget + event log intact.
+
+**New renderer adapters** ([src/producer/kling.py](src/producer/kling.py), [src/producer/veo.py](src/producer/veo.py)):
+- **KlingRendererTool** (fal.ai, queue API at `https://queue.fal.run/fal-ai/kling-video/v2.1/{standard|pro}/image-to-video`): auth header is `Key <FAL_KEY>` (literal "Key", not Bearer), two-key failover on 401/403/429 (reads FAL_KEY, FAL_KEY_PRIMARY, FAL_KEY_SECONDARY), duration snaps to `{5, 10}`, content policy 422 → `failure_stage="content_policy"` (terminal — same prompt won't succeed on retry), `encode_image_as_data_uri()` helper for injecting local files as data URIs. Kling 2.1 is I2V-only — `image_url` is mandatory; adapter refuses loudly without one.
+- **VeoRendererTool** (Vertex AI `veo-3.1-fast-generate-001`, us-central1): ADC bearer auth via lazy-imported `google-auth`, polling pattern is POST `:fetchPredictOperation` (not the usual GET operations/ID), duration discrete `{4, 6, 8}` snapped upward, `generateAudio: false` forces $0.10/s tier (ElevenLabs owns audio), `personGeneration: "disallow"` is belt+braces after the `humans_never_veo` router rule. **Gotcha**: Veo bills filtered samples → content-policy failures pass `billed_cost_usd` up so `record_spend` can reconcile.
+
+**Wired into render_cmd.py** ([src/rectoverso/render_cmd.py](src/rectoverso/render_cmd.py)): branches on `provider_id`, pre-flight budget now uses per-provider cost estimation (`_estimate_render_cost`), rolls back the scaffolded attempt+history if the tool builder refuses (e.g., Kling without a reference image).
+
+**Retry loop** ([src/rectoverso/revise_cmd.py](src/rectoverso/revise_cmd.py)): `rectoverso revise --shot <id>` dispatches PromptSmith with `revision=True`, projects the rewritten prompt into `shot.prompt`, stamps `attempts[-1].prompt_revision` for provenance. Contract 2 (shot_judge → prompt_smith) re-verifies `judge_notes` inside dispatch. **Live-validated**: sh_003 went 0.683 → 0.907 by feeding judge_notes into a new prompt that addressed the specific issues ("locked-off contradicts handheld" → "handheld camera with subtle drift and breathing"). Contract 2 is load-bearing.
+
+**Capabilities.yaml corrections** ([router/capabilities.yaml](router/capabilities.yaml), informed by two parallel research agents hitting live docs):
+- Kling 2.1 Pro: $0.49 base 5s + $0.098/extra second (was $0.45 / $0.09). Model IDs need the `fal-ai/` prefix.
+- Veo 3.1 Fast: $0.10/s with audio disabled (was $0.14), `model_id: veo-3.1-fast-generate-001`, `valid_durations_s: [4, 6, 8]`, `negative_prompt_support: true` (3.1 Fast DOES support negatives — older docs said otherwise), added `raiMediaFilteredCount > 0 billed anyway` to known_failures.
+
+**Live test results** against `/tmp/rv-live` manifest (lighthouse-keeper brief):
+
+| shot | provider | attempt | score | latency | cost | verdict |
+|---|---|---|---|---|---|---|
+| sh_001 | Veo 3.1 Fast | 1 | **0.917** | 41.5s | $0.40 | approved (hero establishing) |
+| sh_003 | Wan 2.6 | 1 | 0.683 | — | $0 (quota) | rejected (stub prompt) |
+| sh_003 | Wan 2.6 | 2 (revised) | **0.907** | 50.8s | $0 (quota) | approved (retry loop closed) |
+| sh_006 | Kling 2.1 Pro | 1 | 0.650 | 97.5s | $0.49 | rejected — figure absent from frame |
+
+Shot Judge's notes on sh_001: *"Wide establishing shot of weathered stone lighthouse on craggy headland, cold blue-grey palette matches brief precisely. Thick grey mist lifts subtly from left side across frames 1→3..."* — the vision pass actually described keyframes, proving it's evaluating the real artifact and not score-gaming. Full audit trail lives in `shots[].history[]` (append-only per schema) and `state/events.db`.
+
+**Hyperframes assembly** ([/tmp/rv-live/artifacts/assembly/index.html](../../tmp/rv-live/artifacts/assembly/index.html)): 11s / 1920×1080 / 30fps / h264+aac / 28.2 MB composition that sequences title card (0-2s) → sh_001 (2-6s) → sh_003 v2 (6-11s) with cross-fades and an attribution tag. Hand-written for this test because Editor Agent is still Tier-2 TBD; linted clean (0 err 0 warn), rendered via `HyperframesTool` adapter in 45.9s. **Determinism verified** — two back-to-back renders produced identical MD5 `41df504ca6ba88ebb31362449bd99be7`. The bit-identical claim in CLAUDE.md is real and can be used as a regression-test primitive on the final film output.
+
+Manifest `edit` block projected + validated against schema (`status: approved`, `renderer: hyperframes`, `renderer_version: 0.4.15`, `total_duration_s: 11.0`, md5 stamped). Schema caught two misnamed fields on the first try (`duration_s` vs `total_duration_s`, `rendered` vs `approved`) — `additionalProperties: false` on `edit` is doing its job.
+
+**Bugs surfaced and fixed**:
+1. [src/rectoverso/render_cmd.py](src/rectoverso/render_cmd.py) hardcoded `actual_cost_usd=0.0` in `record_spend()` — correct for Wan (free quota), silent budget drift for Kling/Veo. Fixed to pass `tool_out["cost_usd"]` through honestly; also added a `record_spend` call on the failed branch so Veo's content-policy-billed samples don't slip past. Manifest retroactively reconciled: $0.89 actual spend ($0.40 Veo + $0.49 Kling) now matches ledger per-provider. Full suite 350/350 after fix.
+2. `test_duration_bound_direct_rule` was asserting against a stale 8s Wan Plus cap after capabilities.yaml updated Wan Plus to 10s earlier in-session. Switched the assertion to Veo's (real) 8s cap.
+3. `_snap_duration(12) == 15` test was stale vs. actual Wan `{5, 10}` snap set. Updated.
+4. Wan clamp note and docstring referenced `{5,10,15}`; now `{5,10}`.
+
+**New test coverage**: 42 new tests (+350/350 total).
+- [tests/producer/test_kling.py](tests/producer/test_kling.py) — 18: submit/poll/result/download, auth header is literal "Key", duration clamp, Pro pricing, missing image_url, content_policy 422, key failover 401→backup, no-backup terminal, poll timeout, malformed result, zero-byte download, pure helpers.
+- [tests/producer/test_veo.py](tests/producer/test_veo.py) — 16: inline base64 path, gs:// download path, duration clamp {4,6,8}, submit body shape (storageUri/generateAudio/personGeneration/negativePrompt/seed), missing project id, auth provider failure, content-policy-is-billed, 400 validation, 429 rate limit, poll timeout, operation:error, malformed videos, URL builders.
+- [tests/cli/test_revise.py](tests/cli/test_revise.py) — 10: happy path, revision+prior-prompt payload, prompt_revision stamping, events wiring, missing manifest/shot, wrong status, empty judge_notes, malformed last attempt.
+
+**Known remaining** (tomorrow / this session's wind-down):
+- Kling stale model_ids in the live `/tmp/rv-live` manifest need the `fal-ai/` prefix patch on sh_002/sh_004/sh_008 (pre-date the YAML prefix fix). Patched sh_006 inline during testing.
+- Kling I2V without a subject-in-frame reference produces empty-scene outputs. Day-4 consideration elevated to blocker for any remaining human shot: need a ref-image generator (Qwen-image or nano-banana).
+- `google-auth` + `requests` now required for Veo — need pyproject.toml pin. Manual pip install got today's test through.
+
 ### 2026-04-23T10:30:00Z — Tier-3 LLM adapters + `rectoverso run` driver landed
 First real Anthropic SDK calls in the codebase. Screenwriter and PromptSmith are now executable adapters, and a new `rectoverso run <brief.json>` command drives them end-to-end: brief → shot list → router → per-shot prompts → manifest.json fully prompted and fully routed. Stops short of Tier-2 agents (next up for Day 4).
 

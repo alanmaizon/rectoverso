@@ -1,0 +1,18 @@
+# Runtime dependencies for rectoverso.
+# Test deps live in tests/requirements.txt.
+#
+# Install: pip install -r requirements.txt
+
+# Anthropic SDK — Tier-3 Messages API + Tier-2 Managed Agents.
+anthropic>=0.96.0
+
+# Router / manifest loaders.
+jsonschema>=4.20
+PyYAML>=6.0
+
+# Vertex AI Veo renderer (src/producer/veo.py) — lazy-imported ADC path.
+# google-auth is the bearer-token provider. `requests` is the transport
+# google-auth.transport.requests depends on; installing google-auth alone
+# is not enough, the requests package must be present too.
+google-auth>=2.25
+requests>=2.31

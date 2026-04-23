@@ -1,4 +1,4 @@
-# Artistic Pipeline, Not Deterministic
+# Artistic Pipeline, Deterministic Default
 
 ## Confirmed Design Shifts
 

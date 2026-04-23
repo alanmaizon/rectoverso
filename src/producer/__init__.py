@@ -60,7 +60,9 @@ from .manifest_io import (
     validate_manifest,
 )
 from .kling import KlingRendererTool, encode_image_as_data_uri
+from .nano_banana import NanoBananaImageTool
 from .prompt_smith import PromptSmithTool
+from .qwen_image import QwenImageTool
 from .renderer import WanRendererTool
 from .screenwriter import ScreenwriterTool
 from .shot_judge import ShotJudgeTool
@@ -82,6 +84,8 @@ __all__ = [
     "WanRendererTool",
     "KlingRendererTool",
     "VeoRendererTool",
+    "QwenImageTool",
+    "NanoBananaImageTool",
     "encode_image_as_data_uri",
     "ShotJudgeTool",
     "LLMClient",
