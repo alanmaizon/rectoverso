@@ -72,8 +72,13 @@ from .editor import (
     EditorSession,
     EditorSessionResult,
     EditorTool,
+    SessionBudgetError,
+    SessionError,
+    SessionInfrastructureError,
+    SessionProtocolError,
     parse_editor_result,
 )
+from .editor_session import AnthropicManagedAgentsSession
 from .film_status import (
     ASSEMBLING,
     COMPOSED,
@@ -129,6 +134,11 @@ __all__ = [
     "EditorTool",
     "EditorSession",
     "EditorSessionResult",
+    "SessionError",
+    "SessionInfrastructureError",
+    "SessionProtocolError",
+    "SessionBudgetError",
+    "AnthropicManagedAgentsSession",
     "parse_editor_result",
     "PENDING",
     "ASSEMBLING",

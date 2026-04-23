@@ -49,6 +49,7 @@ from src.producer import (
     open_event_log,
     save_manifest_atomic,
 )
+from src.producer.editor_session import AnthropicManagedAgentsSession
 
 from . import run as _run_driver
 
@@ -348,25 +349,37 @@ def _build_toolset(args: argparse.Namespace) -> ToolSet:
 
         normalize_fn = _normalize_fn
 
-    # Editor callable. The real Managed Agents session implementation is
-    # deferred to its own commit (token streaming + tool-call logs + archive
-    # lifecycle) — for now the CLI ships with editor=None, which is a clean
-    # no-op: the orchestrator simply doesn't fire the trigger. Operator gets
-    # film_status=pending with every approved+normalized shot; a follow-up
-    # commit productizes AnthropicManagedAgentsSession and plugs it in here.
+    # Editor callable — wraps EditorTool over AnthropicManagedAgentsSession.
+    # Artifacts land in artifacts/edit/uploads/<session_id>/ so the existing
+    # clear_edit_artifacts invariant (film_status → pending clears
+    # artifacts/edit/) covers them automatically.
     editor_fn = None
     if not args.no_editor:
-        # Reserved: once AnthropicManagedAgentsSession lands, this will be:
-        #     session = AnthropicManagedAgentsSession(...)
-        #     editor_tool = EditorTool(session=session)
-        #     def _editor_fn(*, manifest_path, workspace_dir, brief_slice, estimated_cost_usd):
-        #         return editor_tool(None, {
-        #             "manifest_path": manifest_path,
-        #             "workspace_dir": workspace_dir,
-        #             "brief_slice": brief_slice,
-        #             "estimated_cost_usd": estimated_cost_usd,
-        #         })
-        editor_fn = None
+        import anthropic as _anthropic
+        _api_key = None  # default_client() already resolves from env
+        _anthropic_client = _anthropic.Anthropic()
+
+        _session = AnthropicManagedAgentsSession(
+            client=_anthropic_client,
+            storage_root=args.editor_workspace / "uploads",
+        )
+        _editor_tool = EditorTool(session=_session)
+
+        def _editor_fn(
+            *,
+            manifest_path: Path,
+            workspace_dir: Path,
+            brief_slice: Mapping[str, Any],
+            estimated_cost_usd: float,
+        ) -> dict:
+            return _editor_tool(None, {
+                "manifest_path": manifest_path,
+                "workspace_dir": workspace_dir,
+                "brief_slice": brief_slice,
+                "estimated_cost_usd": estimated_cost_usd,
+            })
+
+        editor_fn = _editor_fn
 
     return ToolSet(
         render=_render_fn,

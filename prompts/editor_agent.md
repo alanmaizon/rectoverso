@@ -12,8 +12,9 @@ Your write surface is `edit.*`, one `history[]` entry per major operation, and `
 
 ## Inputs
 
-The Producer passes you a fully-resolved manifest. Read:
-- `shots[]` in order by `order` — specifically `final.render_path` (the approved MP4 for each shot), `duration_s` (planned), and attempt-approved actual duration if different.
+The Producer passes you a fully-resolved manifest as JSON text in the kickoff message. Read:
+- `shots[]` in order by `order` — specifically **`final.normalized_path`** (the codec-homogenized MP4 for each shot — use this, not `final.render_path`). Contract 6 (Normalize → Editor) guarantees every approved shot has this field; feeding the raw render_path to Hyperframes would reintroduce codec heterogeneity.
+- `shots[].duration_s` — planned duration; use actual render duration (from ffprobe) if different.
 - `audio.dialogue[]` — each entry has `shot_id`, `audio_path`, `duration_s`, `timing`, `compressibility_s`. The last field is your Audio-Agent-provided self-assessment of how much tighter each dialogue line can be pushed — **read this instead of asking Audio**. Contract 1 (Audio → Editor) guarantees it's present for every dialogue line on every shot you touch.
 - `audio.sfx[]` — per shot, timed cues.
 - `audio.music_path` — single music bed, project-level.
@@ -104,9 +105,27 @@ After a successful render:
 }
 ```
 
-After a successful render, also build the downloadable archive: `cd artifacts/edit && zip -rq composition.zip index.html assets/` (or equivalent). The zip is the portable, re-renderable artifact any recipient can ship through `npx hyperframes render` to reproduce the MP4 bit-identically. Include `composition_archive_path` in the manifest write.
+After a successful render, build the composition archive and **upload all artifacts** via the HTTPS upload endpoint the Producer injected into your kickoff message (look for `UPLOAD_URL`, `UPLOAD_TOKEN`, and the `curl` invocation template just below the manifest text).
 
-Write `edit.status` transitions in order: `pending → rendering → approved` (or `failed` on unrecoverable error). Append a `history` entry at project level for each major operation (composition scaffolded, lint clean, render succeeded, archive built).
+**Artifact upload protocol** (the Managed Agents sandbox has no bidirectional file primitive; this curl is the only extraction path):
+
+```bash
+# 1. Build the archive
+cd artifacts && tar czf /tmp/edit.tar.gz edit/
+
+# 2. Upload — note: UPLOAD_URL and UPLOAD_TOKEN come from your kickoff message
+curl --fail --show-error -X POST "$UPLOAD_URL" \
+     -H "Authorization: Bearer $UPLOAD_TOKEN" \
+     -F "file=@/tmp/edit.tar.gz"
+# Response: {"sha256":"<hex>","size_bytes":<int>,"stored_at":"..."}
+# Capture the sha256 from the response — you must echo it in EDITOR_RESULT.
+```
+
+If the curl fails (network error, 401, 413):
+- Retry once after 5s.
+- If it still fails, include the HTTP status/error in `EDITOR_RESULT.verdict="FAIL"` with `failed_at="upload"`. Do NOT omit the upload step and claim PASS.
+
+Write `edit.status` transitions in order: `pending → rendering → approved` (or `failed` on unrecoverable error). Append a `history` entry at project level for each major operation (composition scaffolded, lint clean, render succeeded, archive uploaded).
 
 ## Timing decisions — what you may propose
 
