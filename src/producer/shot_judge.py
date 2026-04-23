@@ -171,16 +171,26 @@ class ShotJudgeTool:
                 f"shot_judge: model returned unparseable output ({type(exc).__name__}: {exc})"
             ) from exc
 
-        # 3) normalize, compute outcome
+        # 3) normalize, compute outcome. Pass prior attempts' judge_scores so
+        # _decide_outcome can detect volatility across the shot's history.
+        # The current attempt's score is NOT in prior_scores — it's passed
+        # separately as `judge_score`.
         scores = _normalize_scores(parsed, mode=mode)
         judge_score = _compute_judge_score(scores)
-        outcome, rejection_reason = _decide_outcome(
+        prior_scores = [
+            float(a["judge_score"]) for a in attempts[:-1]
+            if isinstance(a, Mapping) and isinstance(a.get("judge_score"), (int, float))
+        ]
+        outcome, rejection_reason, escalation_reason = _decide_outcome(
             judge_score=judge_score,
             artifact_flag=scores["artifact_flag"],
             attempts_count=len(attempts),
+            prior_scores=prior_scores,
         )
 
-        notes = _ensure_notes(parsed.get("judge_notes"), mode, outcome)
+        notes = _ensure_notes(
+            parsed.get("judge_notes"), mode, outcome, escalation_reason
+        )
 
         return {
             "judge_score": round(judge_score, 4),
@@ -192,6 +202,7 @@ class ShotJudgeTool:
             "feedback": parsed.get("feedback") or [],
             "outcome": outcome,
             "rejection_reason": rejection_reason,
+            "escalation_reason": escalation_reason,
             "mode": mode,
             "model": resp.model,
             "usage": _usage_dict(resp.usage),
@@ -476,21 +487,79 @@ def _decide_outcome(
     judge_score: float,
     artifact_flag: bool,
     attempts_count: int,
-) -> tuple[str, str | None]:
-    """Thresholds from docs/agents.md § Shot Judge. Local so we can tune without
-    breaking the cached system prompt."""
-    if judge_score < ESCALATE_THRESHOLD or attempts_count >= MAX_ATTEMPTS_BEFORE_ESCALATE:
-        return "escalated", "auto_judge"
-    if judge_score >= APPROVE_THRESHOLD and not artifact_flag:
-        return "approved", None
+    prior_scores: list[float] | None = None,
+) -> tuple[str, str | None, str | None]:
+    """Decide (outcome, rejection_reason, escalation_reason).
+
+    Rules are documented in prompts/shot_judge.md § "Decision thresholds" and
+    § "Volatility escalation". Kept local (not in the cached system prompt) so
+    we can tune thresholds without invalidating the prompt cache on every
+    deploy.
+
+    Priority order matters — first match wins:
+
+    1. score < ESCALATE_THRESHOLD      → escalated / below_threshold
+    2. would-approve AND volatile      → escalated / volatile_scores
+    3. would-approve AND stable        → approved
+    4. not would-approve AND attempts >= max → escalated / max_attempts_exhausted
+    5. otherwise                        → rejected (with rejection_reason)
+
+    Important: max_attempts_exhausted ONLY fires when the current attempt
+    also fails to approve. A would-approve attempt at attempts_count >= 3
+    goes to `approved` (or `volatile_scores` if the trajectory is unstable),
+    not `max_attempts_exhausted` — retry-count shouldn't override a legitimate
+    pass, only a second failure.
+    """
+    if judge_score < ESCALATE_THRESHOLD:
+        return "escalated", None, "below_threshold"
+    would_approve = judge_score >= APPROVE_THRESHOLD and not artifact_flag
+    if would_approve and _scores_are_volatile(prior_scores, judge_score):
+        return "escalated", None, "volatile_scores"
+    if would_approve:
+        return "approved", None, None
+    # Below approve, above escalate. If we've retried enough, stop; otherwise
+    # send it back for one more revision.
+    if attempts_count >= MAX_ATTEMPTS_BEFORE_ESCALATE:
+        return "escalated", None, "max_attempts_exhausted"
     reason = "artifact" if artifact_flag else "auto_judge"
-    return "rejected", reason
+    return "rejected", reason, None
 
 
-def _ensure_notes(raw_notes: Any, mode: str, outcome: str) -> str:
+# Any two scores differing by ≥ VOLATILITY_DELTA make the trajectory volatile.
+# 0.10 is tuned against the sh_005 v1/v2/v3 run where [0.783, 0.667, 0.833]
+# fired (0.833-0.667 = 0.166 > 0.10) and correctly escalated instead of
+# silent-approving on a lucky take.
+VOLATILITY_DELTA = 0.10
+
+
+def _scores_are_volatile(prior: list[float] | None, current: float) -> bool:
+    """Return True when the attempt history + current score swing enough to
+    justify human review even though the current score would approve.
+
+    Needs at least TWO prior attempts to fire (so the current attempt is
+    attempt 3+). Two attempts alone can't demonstrate a pattern — one rejection
+    followed by a successful revision is the normal retry loop, not volatility.
+    """
+    if not prior or len(prior) < 2:
+        return False
+    all_scores = [*prior, current]
+    return (max(all_scores) - min(all_scores)) >= VOLATILITY_DELTA
+
+
+def _ensure_notes(
+    raw_notes: Any,
+    mode: str,
+    outcome: str,
+    escalation_reason: str | None = None,
+) -> str:
     """Contract 2 requires non-empty judge_notes when outcome == 'rejected'.
     If the model returned empty notes on a rejection, synthesize a minimal
-    note so the pipeline doesn't stall on the next revision dispatch."""
+    note so the pipeline doesn't stall on the next revision dispatch.
+
+    For escalations, synthesize a reason-specific note when absent so the
+    orchestrator's summary has enough context to route the shot to the right
+    human-review queue.
+    """
     notes = (raw_notes or "").strip() if isinstance(raw_notes, str) else ""
     if outcome == "rejected" and not notes:
         notes = (
@@ -498,10 +567,24 @@ def _ensure_notes(raw_notes: Any, mode: str, outcome: str) -> str:
             "Treat as 'quality below threshold; detailed feedback unavailable'."
         )
     if outcome == "escalated" and not notes:
-        notes = (
-            f"[{mode} mode] Judge escalated: score below {ESCALATE_THRESHOLD:.2f} "
-            f"or attempts cap hit."
-        )
+        reason_notes = {
+            "below_threshold": (
+                f"Judge escalated: score below {ESCALATE_THRESHOLD:.2f}. "
+                "Render is too broken for prompt revision to fix — swap provider, "
+                "rework the reference image, or drop the shot."
+            ),
+            "max_attempts_exhausted": (
+                f"Judge escalated: {MAX_ATTEMPTS_BEFORE_ESCALATE} attempts without "
+                "landing approved. Problem is upstream (prompt, reference, or "
+                "routing); more retries will compound cost without signal."
+            ),
+            "volatile_scores": (
+                "Judge escalated: score trajectory across attempts is unstable "
+                f"(delta ≥ {VOLATILITY_DELTA:.2f}). The pipeline produced this take "
+                "but didn't do so reliably — human should confirm which attempt ships."
+            ),
+        }.get(escalation_reason or "", "Judge escalated (no structured reason).")
+        notes = f"[{mode} mode] {reason_notes}"
     return notes
 
 

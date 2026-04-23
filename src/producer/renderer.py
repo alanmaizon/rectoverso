@@ -40,14 +40,14 @@ Intent / Architecture / Edge cases:
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
+
+from ._common import http_error_body, md5_file, resolve_env_key
 
 
 # ---------------------------------------------------------------------------
@@ -68,8 +68,23 @@ WAN_POLL_URL_FMT = "https://dashscope-intl.aliyuncs.com/api/v1/tasks/{task_id}"
 
 # Poll cadence recommended by the DashScope docs.
 DEFAULT_POLL_INTERVAL_S = 15
-DEFAULT_POLL_TIMEOUT_S = 600  # 10 minutes; typical render is 1-5 min
 DEFAULT_HTTP_TIMEOUT_S = 60
+
+# Per-model poll-timeout defaults. Wan 2.7 Plus legitimately runs 15-20 min on
+# complex prompts (verified during the cold-run orchestrator test — sh_003
+# was still RUNNING at 600s and would have completed had we waited). Turbo and
+# older variants are typically under 5 min; keep them on the tighter budget.
+DEFAULT_POLL_TIMEOUT_S = 600              # base default (Turbo, legacy Wan)
+WAN_27_PLUS_POLL_TIMEOUT_S = 1200         # 20 min for Wan 2.7 Plus complex shots
+
+
+def _poll_timeout_for_model(model: str) -> int:
+    """Per-model poll timeout. The constructor's explicit `poll_timeout_s`
+    overrides this (honored verbatim for tests and manual tuning); if None,
+    this function picks the appropriate default."""
+    if model.lower().startswith("wan2.7"):
+        return WAN_27_PLUS_POLL_TIMEOUT_S
+    return DEFAULT_POLL_TIMEOUT_S
 
 
 class WanRendererTool:
@@ -97,7 +112,7 @@ class WanRendererTool:
         submit_url: str = WAN_SUBMIT_URL,
         poll_url_fmt: str = WAN_POLL_URL_FMT,
         poll_interval_s: float = DEFAULT_POLL_INTERVAL_S,
-        poll_timeout_s: float = DEFAULT_POLL_TIMEOUT_S,
+        poll_timeout_s: float | None = None,
         http_timeout_s: float = DEFAULT_HTTP_TIMEOUT_S,
         sleep: Any = time.sleep,
         urlopen: Any = None,
@@ -106,6 +121,8 @@ class WanRendererTool:
         self._submit_url = submit_url
         self._poll_url_fmt = poll_url_fmt
         self._poll_interval_s = poll_interval_s
+        # None → per-model resolution at call time (see _poll_timeout_for_model).
+        # Explicit value → honored verbatim (test hooks, manual tuning).
         self._poll_timeout_s = poll_timeout_s
         self._http_timeout_s = http_timeout_s
         self._sleep = sleep
@@ -134,6 +151,14 @@ class WanRendererTool:
         duration_s = int(payload.get("duration_s", 5))
         resolution = payload.get("resolution", "720p")
         seed = payload.get("seed")
+
+        # Resolve effective poll timeout. If the constructor got a non-None
+        # override, use it; otherwise pick per-model (Plus=1200s, Turbo=600s).
+        effective_poll_timeout_s = (
+            self._poll_timeout_s
+            if self._poll_timeout_s is not None
+            else _poll_timeout_for_model(model)
+        )
 
         # Wan's supported durations per the API docs are {5, 10}. Callers
         # pass the shot's planned duration; we snap to the nearest legal value
@@ -172,7 +197,7 @@ class WanRendererTool:
                 stage="submit",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=model,
                 attempt_output_name=output_path.name,
                 clamp_note=_clamp_note(duration_s, actual_duration),
@@ -192,7 +217,7 @@ class WanRendererTool:
 
         # 2) poll
         poll_url = self._poll_url_fmt.format(task_id=task_id)
-        deadline = started + self._poll_timeout_s
+        deadline = started + effective_poll_timeout_s
         video_url: str | None = None
         last_status: str | None = None
 
@@ -234,12 +259,14 @@ class WanRendererTool:
                 stage="poll:timeout",
                 started=started,
                 poll_log=poll_log,
-                stderr=f"task {task_id} did not complete within {self._poll_timeout_s}s "
+                stderr=f"task {task_id} did not complete within {effective_poll_timeout_s}s "
                 f"(last_status={last_status})",
                 model=model,
                 attempt_output_name=output_path.name,
                 task_id=task_id,
                 clamp_note=_clamp_note(duration_s, actual_duration),
+                poll_timeout_s=effective_poll_timeout_s,
+                last_status=last_status,
             )
 
         # 3) download
@@ -250,7 +277,7 @@ class WanRendererTool:
                 stage="download",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=model,
                 attempt_output_name=output_path.name,
                 task_id=task_id,
@@ -270,7 +297,7 @@ class WanRendererTool:
                 clamp_note=_clamp_note(duration_s, actual_duration),
             )
 
-        md5 = _md5_file(output_path)
+        md5 = md5_file(output_path)
         latency = round(time.time() - started, 3)
         note = _clamp_note(duration_s, actual_duration)
 
@@ -288,6 +315,7 @@ class WanRendererTool:
             "requested_duration_s": duration_s,
             "actual_duration_s": actual_duration,
             "resolution": resolution,
+            "poll_timeout_s": effective_poll_timeout_s,
             "stdout_tail": json.dumps(poll_log)[-500:],
             "stderr_tail": "",
             **({"note": note} if note else {}),
@@ -342,25 +370,8 @@ class WanRendererTool:
 
 
 def _resolve_dashscope_key() -> str | None:
-    """Resolve DASHSCOPE_API_KEY from shell env, then project .env, in that order."""
-    v = os.environ.get("DASHSCOPE_API_KEY")
-    if v:
-        return v
-    here = Path(__file__).resolve()
-    for parent in (here.parent, *here.parents):
-        env_path = parent / ".env"
-        if env_path.is_file():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, vraw = line.partition("=")
-                if k.strip() == "DASHSCOPE_API_KEY":
-                    vraw = vraw.strip().strip('"').strip("'")
-                    if vraw and not vraw.startswith("<"):
-                        return vraw
-            return None
-    return None
+    """Resolve DASHSCOPE_API_KEY from shell env, then project .env."""
+    return resolve_env_key("DASHSCOPE_API_KEY")
 
 
 def _snap_duration(requested_s: int) -> int:
@@ -418,21 +429,6 @@ def _provider_from_model(model: str) -> str:
     return "alibaba_wan"
 
 
-def _md5_file(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _error_body(exc: urllib.error.HTTPError) -> str:
-    try:
-        return (exc.read().decode("utf-8", errors="replace"))[:500]
-    except Exception:
-        return f"{exc.code} {exc.reason}"
-
-
 def _clamp_note(requested: int, actual: int) -> str:
     if requested == actual:
         return ""
@@ -449,6 +445,8 @@ def _failure(
     attempt_output_name: str,
     task_id: str | None = None,
     clamp_note: str = "",
+    poll_timeout_s: int | None = None,
+    last_status: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "status": "failed",
@@ -468,4 +466,12 @@ def _failure(
         payload["task_id"] = task_id
     if clamp_note:
         payload["note"] = clamp_note
+    # Timeout failures surface the budget + last-seen provider state as
+    # first-class fields so downstream code (judge/summary/orchestrator)
+    # can distinguish "provider slow, consider bumping timeout" from
+    # "provider rejected (FAILED/CANCELED)" without parsing stderr.
+    if poll_timeout_s is not None:
+        payload["poll_timeout_s"] = poll_timeout_s
+    if last_status is not None:
+        payload["last_status"] = last_status
     return payload

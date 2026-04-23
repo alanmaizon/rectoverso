@@ -10,11 +10,9 @@ Edge cases:  missing API key, HTTP error on submit, task FAILED, poll timeout,
 
 from __future__ import annotations
 
-import io
 import json
-import urllib.error
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -27,46 +25,13 @@ from src.producer.renderer import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Fake HTTP plumbing
-# ---------------------------------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, body: bytes, *, status: int = 200):
-        self._body = body
-        self.status = status
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def read(self, n: int | None = None) -> bytes:
-        if n is None:
-            return self._body
-        out, self._body = self._body[:n], self._body[n:]
-        return out
-
-
-def _json_response(obj: Any) -> _FakeResponse:
-    return _FakeResponse(json.dumps(obj).encode("utf-8"))
-
-
-def _make_urlopen(plan: list[Callable[[Any], _FakeResponse]]) -> Callable:
-    """plan is a sequence of responders; each call consumes one."""
-    calls = []
-
-    def _fake(req_or_url, timeout=None):
-        if not plan:
-            raise AssertionError("unexpected extra urlopen call")
-        url = getattr(req_or_url, "full_url", None) or str(req_or_url)
-        calls.append({"url": url, "method": getattr(req_or_url, "method", "GET")})
-        return plan.pop(0)(req_or_url)
-
-    _fake.calls = calls  # type: ignore[attr-defined]
-    return _fake
+# Shared HTTP plumbing lives in tests/producer/_fakes.py.
+from tests.producer._fakes import (
+    FakeResponse as _FakeResponse,
+    http_error as _http_error,
+    json_response as _json_response,
+    make_urlopen as _make_urlopen,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -268,9 +233,7 @@ def test_shot_id_required(tmp_path: Path) -> None:
 
 def test_submit_http_error_returns_failure(tmp_path: Path) -> None:
     def _raise(req):
-        raise urllib.error.HTTPError(
-            WAN_SUBMIT_URL, 401, "Unauthorized", {}, io.BytesIO(b'{"error":"bad key"}')
-        )
+        raise _http_error(401, '{"error":"bad key"}', url=WAN_SUBMIT_URL)
 
     tool = WanRendererTool(
         api_key="bad", urlopen=_make_urlopen([_raise]), sleep=lambda _s: None
@@ -354,6 +317,55 @@ def test_poll_timeout(tmp_path: Path) -> None:
     assert "did not complete" in result["stderr_tail"]
     # Should have polled a handful of times, not thousands.
     assert 1 <= call_count["n"] <= 10
+    # Timeout metadata surfaces as first-class fields — callers shouldn't
+    # have to grep stderr to tell "provider slow" from "provider FAILED".
+    assert result["poll_timeout_s"] == 300
+    assert result["last_status"] == "RUNNING"
+
+
+def test_per_model_poll_timeout_default() -> None:
+    """Wan 2.7 Plus gets 1200s by default; Turbo and older stay at 600s.
+    This is config-only — tested by direct call to the resolver so no HTTP
+    plumbing is needed."""
+    from src.producer.renderer import (
+        DEFAULT_POLL_TIMEOUT_S,
+        WAN_27_PLUS_POLL_TIMEOUT_S,
+        _poll_timeout_for_model,
+    )
+    assert WAN_27_PLUS_POLL_TIMEOUT_S == 1200
+    assert DEFAULT_POLL_TIMEOUT_S == 600
+    # Plus: 1200s (20 min) for complex prompts.
+    assert _poll_timeout_for_model("wan2.7-t2v") == 1200
+    assert _poll_timeout_for_model("wan2.7-plus") == 1200
+    # Turbo + older: tighter 600s default.
+    assert _poll_timeout_for_model("wan2.6-t2v") == 600
+    assert _poll_timeout_for_model("wan2.5-foo") == 600
+    # Unknown model: safe tighter default (never silently expand).
+    assert _poll_timeout_for_model("unknown-model") == 600
+
+
+def test_explicit_poll_timeout_overrides_per_model_default(tmp_path: Path) -> None:
+    """A constructor-level poll_timeout_s is honored verbatim, regardless of
+    the model. Tests and manual overrides depend on this."""
+    # Using a minimal happy path; verify the effective timeout lands in the
+    # result's poll_timeout_s field.
+    plan = [
+        lambda req: _json_response({"output": {"task_id": "t_x", "task_status": "PENDING"}}),
+        lambda req: _json_response(
+            {"output": {"task_status": "SUCCEEDED", "video_url": "https://fake/v.mp4"}}
+        ),
+        lambda req: _FakeResponse(b"\x00" * 128),
+    ]
+    tool = WanRendererTool(
+        api_key="sk",
+        urlopen=_make_urlopen(plan),
+        sleep=lambda _: None,
+        poll_timeout_s=77,   # explicit override, unusual value so it's obvious
+        poll_interval_s=0,
+    )
+    result = tool(shot_id="sh_x", payload=_payload(tmp_path, model="wan2.7-t2v"))
+    # Model would normally resolve to 1200 (Plus), but explicit 77 wins.
+    assert result["poll_timeout_s"] == 77
 
 
 def test_empty_download_is_failure(tmp_path: Path) -> None:

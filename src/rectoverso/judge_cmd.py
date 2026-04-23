@@ -179,14 +179,25 @@ def cmd_judge(args: argparse.Namespace) -> int:
     # Project into attempt
     attempt["judge_score"] = float(tool_out["judge_score"])
     attempt["judge_notes"] = tool_out["judge_notes"]
+    # Schema attempt.outcome enum is ["pending", "approved", "rejected", "failed"]
+    # — no "escalated" slot. Escalation lives at shot.status; we store the
+    # attempt outcome as "rejected" + populate escalation_reason so downstream
+    # code (orchestrator summary, CLI output) can distinguish the three
+    # escalation cases without a manifest schema change.
     attempt["outcome"] = outcome if outcome != "escalated" else "rejected"
-    # Schema requires completed_at on every outcome; stamp it now that the
-    # judge has terminated this attempt.
     attempt.setdefault("completed_at", _now_iso())
     if outcome == "approved":
         attempt["approved_by"] = "shot_judge"
-    elif outcome in ("rejected", "escalated"):
+    elif outcome == "rejected":
         attempt["rejection_reason"] = tool_out.get("rejection_reason") or "auto_judge"
+    elif outcome == "escalated":
+        # Attempt still needs rejection_reason (schema requires it when
+        # outcome=rejected) AND we additionally surface escalation_reason so
+        # the human-review pile can be filtered by cause.
+        attempt["rejection_reason"] = tool_out.get("rejection_reason") or "auto_judge"
+        esc_reason = tool_out.get("escalation_reason")
+        if esc_reason:
+            attempt["escalation_reason"] = esc_reason
 
     # Per-shot feedback array
     ts = _now_iso()
@@ -219,12 +230,15 @@ def cmd_judge(args: argparse.Namespace) -> int:
     elif outcome == "escalated":
         shot["status"] = "escalated"
 
+    history_detail = f"score={attempt['judge_score']:.3f} mode={tool_out.get('mode')}"
+    if outcome == "escalated" and tool_out.get("escalation_reason"):
+        history_detail += f" escalation_reason={tool_out['escalation_reason']}"
     shot.setdefault("history", []).append(
         {
             "ts": ts,
             "event": f"judged_{outcome}",
             "by": "shot_judge",
-            "detail": f"score={attempt['judge_score']:.3f} mode={tool_out.get('mode')}",
+            "detail": history_detail,
         }
     )
 
@@ -241,6 +255,7 @@ def cmd_judge(args: argparse.Namespace) -> int:
         "artifact_flag": tool_out["artifact_flag"],
         "mode": tool_out["mode"],
         "rejection_reason": tool_out.get("rejection_reason"),
+        "escalation_reason": tool_out.get("escalation_reason"),
         "shot_status": shot["status"],
         "usage": tool_out.get("usage") or {},
     }
@@ -260,6 +275,8 @@ def cmd_judge(args: argparse.Namespace) -> int:
             f"continuity={summary['continuity']:.2f}"
             f"{' artifact!' if summary['artifact_flag'] else ''})"
         )
+        if summary.get("escalation_reason"):
+            print(f"[judge] escalation_reason: {summary['escalation_reason']}")
         print(f"[judge] mode: {summary['mode']}")
         if tool_out.get("judge_notes"):
             notes = tool_out["judge_notes"]

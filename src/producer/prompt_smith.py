@@ -59,6 +59,10 @@ from .llm import (
 )
 
 
+# Fields the caller MUST populate on the shot dict. List-valued fields that
+# tolerate empty (continuity_refs — most shots have no prior-shot dep) are
+# handled by the reader's .get(..., []) patterns below, not required here.
+# See screenwriter.py OPTIONAL_LIST_SHOT_FIELDS for the sibling convention.
 REQUIRED_SHOT_FIELDS = (
     "shot_id",
     "description",
@@ -66,7 +70,6 @@ REQUIRED_SHOT_FIELDS = (
     "has_humans",
     "is_hero",
     "motion_level",
-    "continuity_refs",
 )
 REQUIRED_ROUTING_FIELDS = ("chosen_provider", "chosen_model")
 

@@ -483,12 +483,14 @@ def _build_parser() -> argparse.ArgumentParser:
     from . import judge_cmd as _judge_mod
     from . import revise_cmd as _revise_mod
     from . import generate_ref_cmd as _genref_mod
+    from . import film_cmd as _film_mod
 
     _run_mod.add_subparser(sub)
     _render_mod.add_subparser(sub)
     _judge_mod.add_subparser(sub)
     _revise_mod.add_subparser(sub)
     _genref_mod.add_subparser(sub)
+    _film_mod.add_subparser(sub)
 
     # ---- manifest ---------------------------------------------------------
     g_man = sub.add_parser("manifest", help="manifest inspection and validation")

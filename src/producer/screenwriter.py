@@ -72,6 +72,16 @@ MAX_SHOT_DURATION_S = 8.0
 MIN_SHOT_COUNT = 8
 MAX_SHOT_COUNT = 15
 
+# Fields the Screenwriter model MUST emit. List-valued fields where the
+# empty list is a legitimate state (no dialogue, no continuity refs) are
+# NOT required — the validator defaults them to [] per
+# docs/agents.md § "Screenwriter output normalization". Rationale: five of
+# seven shots in a typical film have zero dialogue lines; forcing the model
+# to emit `dialogue: []` on every shot trains it to perform a ritual the
+# schema should handle. Same for `continuity_refs` — most shots have no
+# prior-shot dependency. Schema-layer defaulting beats prompt instruction
+# because the failure mode (mid-film validation reject) is eliminated by
+# construction, not made rarer.
 REQUIRED_SHOT_FIELDS = (
     "scene",
     "order",
@@ -80,9 +90,17 @@ REQUIRED_SHOT_FIELDS = (
     "has_humans",
     "is_hero",
     "motion_level",
-    "continuity_refs",
-    "dialogue",
 )
+
+# List-valued fields that default to [] when the model omits them. Mutated
+# onto the shot in-place during validation so downstream readers see a
+# consistent shape regardless of which code path populated the shot.
+# - continuity_refs : most shots have no prior-shot dependency
+# - dialogue        : most shots are silent w.r.t. spoken lines (Screenwriter)
+# - audio_cues      : most shots have no Audio Agent cues on initial seed;
+#                     operator or (future) Screenwriter prompt update adds
+#                     them between seed and orchestrator phase.
+OPTIONAL_LIST_SHOT_FIELDS = ("continuity_refs", "dialogue", "audio_cues")
 MOTION_LEVELS = frozenset(("low", "medium", "high"))
 
 REQUIRED_BRIEF_FIELDS = ("logline", "target_duration_s", "tone", "genre")
@@ -247,6 +265,15 @@ def _validate_shots(shots: list[dict[str, Any]]) -> None:
             raise ValueError(
                 f"shot at index {i} missing required fields: {missing}"
             )
+
+        # List-valued optional fields — default to [] in-place before shape
+        # validation so every downstream reader sees a consistent list type.
+        # Defaulting here is the schema contract; downstream .get(..., [])
+        # calls remain as belt+braces.
+        for field_name in OPTIONAL_LIST_SHOT_FIELDS:
+            if field_name not in s or s[field_name] is None:
+                s[field_name] = []
+
         if s["motion_level"] not in MOTION_LEVELS:
             raise ValueError(
                 f"shot[{i}].motion_level={s['motion_level']!r} not in {sorted(MOTION_LEVELS)}"
@@ -267,6 +294,8 @@ def _validate_shots(shots: list[dict[str, Any]]) -> None:
         if order in seen_orders:
             raise ValueError(f"shot[{i}].order={order} duplicated")
         seen_orders.add(order)
+
+        # Shape validation still fires on the (possibly defaulted) lists.
         refs = s["continuity_refs"]
         if not isinstance(refs, list) or any(not isinstance(r, str) for r in refs):
             raise ValueError(f"shot[{i}].continuity_refs must be a list of strings")

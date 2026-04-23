@@ -33,15 +33,15 @@ Non-retryable by design; re-running the same prompt will fail the same way.
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 import mimetypes
-import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
+
+from ._common import http_error_body, md5_file, resolve_env_key
 
 
 FAL_QUEUE_BASE = "https://queue.fal.run"
@@ -233,7 +233,7 @@ class KlingRendererTool:
                 stage="result_fetch",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=model,
                 request_id=request_id,
                 clamp_note=_clamp_note(duration_s, actual_duration),
@@ -260,7 +260,7 @@ class KlingRendererTool:
                 stage="download",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=model,
                 request_id=request_id,
                 clamp_note=_clamp_note(duration_s, actual_duration),
@@ -278,7 +278,7 @@ class KlingRendererTool:
                 clamp_note=_clamp_note(duration_s, actual_duration),
             )
 
-        md5 = _md5_file(output_path)
+        md5 = md5_file(output_path)
         latency = round(time.time() - started, 3)
         cost = _cost_for(model, actual_duration)
         provider = _provider_from_model(model)
@@ -321,7 +321,7 @@ class KlingRendererTool:
             return resp, primary_key, None
         except urllib.error.HTTPError as exc:
             retryable = exc.code in (401, 403, 429) and backup_key is not None
-            body_text = _error_body(exc)
+            body_text = http_error_body(exc)
             policy = _is_content_policy_violation(body_text)
             if policy:
                 return {}, primary_key, {
@@ -337,7 +337,7 @@ class KlingRendererTool:
                 resp = self._post_json(url, backup_key, body)  # type: ignore[arg-type]
                 return resp, backup_key, None  # type: ignore[return-value]
             except urllib.error.HTTPError as exc2:
-                body_text2 = _error_body(exc2)
+                body_text2 = http_error_body(exc2)
                 if _is_content_policy_violation(body_text2):
                     return {}, backup_key or primary_key, {  # type: ignore[return-value]
                         "stage": "content_policy",
@@ -394,16 +394,9 @@ class KlingRendererTool:
         project's existing `FAL_KEY_PRIMARY`/`FAL_KEY_SECONDARY` convention so
         both work without a rename.
         """
-        primary = (
-            self._primary_key
-            or _resolve_env("FAL_KEY")
-            or _resolve_env("FAL_KEY_PRIMARY")
-        )
-        backup = (
-            self._backup_key
-            or _resolve_env("FAL_KEY_2")
-            or _resolve_env("FAL_KEY_BACKUP")
-            or _resolve_env("FAL_KEY_SECONDARY")
+        primary = self._primary_key or resolve_env_key("FAL_KEY", "FAL_KEY_PRIMARY")
+        backup = self._backup_key or resolve_env_key(
+            "FAL_KEY_2", "FAL_KEY_BACKUP", "FAL_KEY_SECONDARY"
         )
         return primary, backup
 
@@ -459,21 +452,6 @@ def _provider_from_model(model: str) -> str:
     return "fal_kling"
 
 
-def _md5_file(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _error_body(exc: urllib.error.HTTPError) -> str:
-    try:
-        return (exc.read().decode("utf-8", errors="replace"))[:500]
-    except Exception:
-        return f"{exc.code} {exc.reason}"
-
-
 def _is_content_policy_violation(body_text: str) -> bool:
     """fal returns 422 with a `detail` list; policy rejects carry type=
     'content_policy_violation'. Return True if ANY entry has that type."""
@@ -496,28 +474,6 @@ def _clamp_note(requested: int, actual: int) -> str:
     if requested == actual:
         return ""
     return f"duration clamped: requested {requested}s -> actual {actual}s (Kling supports {{5,10}})"
-
-
-def _resolve_env(name: str) -> str | None:
-    """Look up `name` in shell env, then in project .env (walking up from __file__)."""
-    v = os.environ.get(name)
-    if v:
-        return v
-    here = Path(__file__).resolve()
-    for parent in (here.parent, *here.parents):
-        env_path = parent / ".env"
-        if env_path.is_file():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, vraw = line.partition("=")
-                if k.strip() == name:
-                    vraw = vraw.strip().strip('"').strip("'")
-                    if vraw and not vraw.startswith("<"):
-                        return vraw
-            return None
-    return None
 
 
 def _failure(

@@ -185,6 +185,72 @@ def test_rejects_non_array_top_level() -> None:
         tool(None, {"brief": BRIEF})
 
 
+# -- optional-list-field defaulting ------------------------------------
+
+
+def test_accepts_shots_without_dialogue_key() -> None:
+    """Live Screenwriter output routinely omits `dialogue` on shots with no
+    voice (five of seven shots in a typical film). Validator must default
+    to [] instead of raising — the bug that blocked the first orchestrator
+    live run."""
+    shots = _valid_shots(3)
+    for s in shots:
+        del s["dialogue"]
+    tool = ScreenwriterTool(client=StubClient(text=json.dumps(shots)))
+    result = tool(None, {"brief": BRIEF})
+    assert len(result["shots"]) == 3
+    # Defaulted in-place so downstream readers see a list, not KeyError.
+    for out_shot in result["shots"]:
+        assert out_shot["dialogue"] == []
+
+
+def test_accepts_shots_without_continuity_refs_key() -> None:
+    """Same pattern for `continuity_refs` — most shots have no prior-shot
+    dependency."""
+    shots = _valid_shots(3)
+    for s in shots:
+        del s["continuity_refs"]
+    tool = ScreenwriterTool(client=StubClient(text=json.dumps(shots)))
+    result = tool(None, {"brief": BRIEF})
+    for out_shot in result["shots"]:
+        assert out_shot["continuity_refs"] == []
+
+
+def test_accepts_mixed_dialogue_shape() -> None:
+    """Some shots carry voice lines, others omit the key entirely. The
+    common real-world shape."""
+    shots = [
+        _valid_shot(1),  # dialogue: [] already set by helper
+        {  # shot 2 omits dialogue + continuity_refs
+            "scene": 1, "order": 2, "description": "Empty platform.",
+            "duration_s": 3.75, "has_humans": False, "is_hero": False,
+            "motion_level": "low",
+        },
+        _valid_shot(3, dialogue=[
+            {"line_id": "l1", "character": "keeper", "text": "Dawn again."}
+        ]),
+    ]
+    tool = ScreenwriterTool(client=StubClient(text=json.dumps(shots)))
+    result = tool(None, {"brief": BRIEF})
+    out = result["shots"]
+    assert out[0]["dialogue"] == []
+    assert out[1]["dialogue"] == []
+    assert out[1]["continuity_refs"] == []
+    assert out[2]["dialogue"][0]["text"] == "Dawn again."
+
+
+def test_accepts_null_dialogue_and_continuity_refs() -> None:
+    """Models sometimes emit `null` rather than omitting the key. Defaulting
+    covers both absence and explicit null."""
+    shots = _valid_shots(2)
+    shots[0]["dialogue"] = None
+    shots[0]["continuity_refs"] = None
+    tool = ScreenwriterTool(client=StubClient(text=json.dumps(shots)))
+    result = tool(None, {"brief": BRIEF})
+    assert result["shots"][0]["dialogue"] == []
+    assert result["shots"][0]["continuity_refs"] == []
+
+
 # -- dispatch integration -----------------------------------------------
 
 

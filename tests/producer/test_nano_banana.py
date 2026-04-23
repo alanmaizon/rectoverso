@@ -7,11 +7,9 @@ so the fake just needs one response per call.
 from __future__ import annotations
 
 import base64
-import io
 import json
-import urllib.error
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -26,65 +24,13 @@ from src.producer.nano_banana import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Fake HTTP plumbing
-# ---------------------------------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, body: bytes, *, status: int = 200):
-        self._body = body
-        self.status = status
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def read(self, n: int | None = None) -> bytes:
-        if n is None:
-            return self._body
-        out, self._body = self._body[:n], self._body[n:]
-        return out
-
-
-def _json_response(obj: Any) -> _FakeResponse:
-    return _FakeResponse(json.dumps(obj).encode("utf-8"))
-
-
-def _http_error(status: int, body: str) -> urllib.error.HTTPError:
-    return urllib.error.HTTPError(
-        url="https://generativelanguage.googleapis.com/",
-        code=status,
-        msg="Fake",
-        hdrs=None,  # type: ignore[arg-type]
-        fp=io.BytesIO(body.encode("utf-8")),
-    )
-
-
-def _make_urlopen(plan: list[Callable[[Any], _FakeResponse]]) -> Callable:
-    calls = []
-
-    def _fake(req_or_url, timeout=None):
-        if not plan:
-            raise AssertionError("unexpected extra urlopen call")
-        url = getattr(req_or_url, "full_url", None) or str(req_or_url)
-        method = getattr(req_or_url, "method", "GET")
-        headers = dict(getattr(req_or_url, "headers", {}) or {})
-        data = getattr(req_or_url, "data", None)
-        body = None
-        if data:
-            try:
-                body = json.loads(data.decode("utf-8"))
-            except (ValueError, TypeError, UnicodeDecodeError):
-                pass
-        calls.append({"url": url, "method": method, "headers": headers, "body": body})
-        return plan.pop(0)(req_or_url)
-
-    _fake.calls = calls  # type: ignore[attr-defined]
-    return _fake
-
+# Shared HTTP plumbing lives in tests/producer/_fakes.py.
+from tests.producer._fakes import (
+    FakeResponse as _FakeResponse,
+    json_response as _json_response,
+    http_error as _http_error,
+    make_urlopen as _make_urlopen,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

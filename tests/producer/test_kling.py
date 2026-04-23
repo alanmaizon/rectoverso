@@ -11,9 +11,8 @@ Edge cases:  missing image_url, key failover, content_policy 422, poll timeout,
 from __future__ import annotations
 
 import json
-import urllib.error
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -27,60 +26,13 @@ from src.producer.kling import (
 )
 
 
-# ---------------------------------------------------------------------------
-# Fake HTTP plumbing
-# ---------------------------------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, body: bytes, *, status: int = 200):
-        self._body = body
-        self.status = status
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-    def read(self, n: int | None = None) -> bytes:
-        if n is None:
-            return self._body
-        out, self._body = self._body[:n], self._body[n:]
-        return out
-
-
-def _json_response(obj: Any) -> _FakeResponse:
-    return _FakeResponse(json.dumps(obj).encode("utf-8"))
-
-
-def _http_error(status: int, body: str) -> urllib.error.HTTPError:
-    import io
-
-    return urllib.error.HTTPError(
-        url="https://queue.fal.run/test",
-        code=status,
-        msg="Fake",
-        hdrs=None,  # type: ignore[arg-type]
-        fp=io.BytesIO(body.encode("utf-8")),
-    )
-
-
-def _make_urlopen(plan: list[Callable[[Any], _FakeResponse]]) -> Callable:
-    calls = []
-
-    def _fake(req_or_url, timeout=None):
-        if not plan:
-            raise AssertionError("unexpected extra urlopen call")
-        url = getattr(req_or_url, "full_url", None) or str(req_or_url)
-        method = getattr(req_or_url, "method", "GET")
-        headers = dict(getattr(req_or_url, "headers", {}) or {})
-        calls.append({"url": url, "method": method, "headers": headers})
-        return plan.pop(0)(req_or_url)
-
-    _fake.calls = calls  # type: ignore[attr-defined]
-    return _fake
-
+# Shared HTTP plumbing lives in tests/producer/_fakes.py.
+from tests.producer._fakes import (
+    FakeResponse as _FakeResponse,
+    json_response as _json_response,
+    http_error as _http_error,
+    make_urlopen as _make_urlopen,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -221,9 +173,9 @@ def test_missing_image_url_rejects_before_submit(tmp_path: Path) -> None:
 
 def test_missing_api_key_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Neutralize the file-walk .env lookup. The project's real .env has fal keys,
-    # and _resolve_env walks from the kling.py module path (not cwd), so chdir
+    # and resolve_env_key walks from the _common.py module path (not cwd), so chdir
     # alone wouldn't isolate the test.
-    monkeypatch.setattr("src.producer.kling._resolve_env", lambda *_a, **_k: None)
+    monkeypatch.setattr("src.producer.kling.resolve_env_key", lambda *_a, **_k: None)
     tool = KlingRendererTool(urlopen=_make_urlopen([]), sleep=lambda _: None)
     with pytest.raises(RuntimeError, match="FAL_KEY"):
         tool("sh_001", _payload(tmp_path))
@@ -280,7 +232,7 @@ def test_no_backup_key_means_auth_failure_is_terminal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Neutralize .env discovery of a backup key (project's real .env has one).
-    monkeypatch.setattr("src.producer.kling._resolve_env", lambda *_a, **_k: None)
+    monkeypatch.setattr("src.producer.kling.resolve_env_key", lambda *_a, **_k: None)
     plan: list = [lambda req: (_ for _ in ()).throw(_http_error(401, '{"detail":"no"}'))]
     tool = KlingRendererTool(api_key="sk-primary", urlopen=_make_urlopen(plan), sleep=lambda _: None)
     result = tool("sh_001", _payload(tmp_path))

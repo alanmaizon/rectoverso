@@ -28,14 +28,14 @@ Failure classes:
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
+
+from ._common import http_error_body, md5_file, resolve_env_key
 
 
 DEFAULT_MODEL = "gemini-2.5-flash-image"
@@ -150,7 +150,7 @@ class NanoBananaImageTool:
         try:
             resp = self._post_json(url, api_key, body)
         except urllib.error.HTTPError as exc:
-            body_text = _error_body(exc)
+            body_text = http_error_body(exc)
             stage = _submit_failure_stage(exc.code, body_text)
             return _failure(
                 stage=stage,
@@ -236,7 +236,7 @@ class NanoBananaImageTool:
                 aspect_ratio=aspect_ratio,
             )
 
-        md5 = _md5_file(output_path)
+        md5 = md5_file(output_path)
         latency = round(time.time() - started, 3)
 
         # Gemini Developer API returns usage metadata; surface it for the caller.
@@ -311,41 +311,7 @@ def _cost_for(model: str) -> float:
 def _resolve_gemini_key() -> str | None:
     """Resolve GEMINI_KEY (our project convention) or GEMINI_API_KEY or
     GOOGLE_API_KEY from env, then project .env."""
-    for name in ("GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
-        v = os.environ.get(name)
-        if v:
-            return v
-    here = Path(__file__).resolve()
-    for parent in (here.parent, *here.parents):
-        env_path = parent / ".env"
-        if env_path.is_file():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, vraw = line.partition("=")
-                k = k.strip()
-                if k in ("GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
-                    vraw = vraw.strip().strip('"').strip("'")
-                    if vraw and not vraw.startswith("<"):
-                        return vraw
-            return None
-    return None
-
-
-def _md5_file(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _error_body(exc: urllib.error.HTTPError) -> str:
-    try:
-        return (exc.read().decode("utf-8", errors="replace"))[:500]
-    except Exception:
-        return f"{exc.code} {exc.reason}"
+    return resolve_env_key("GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY")
 
 
 def _submit_failure_stage(http_code: int, body_text: str) -> str:

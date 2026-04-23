@@ -30,15 +30,15 @@ Dependencies:
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
-import os
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Callable, Mapping
+
+from ._common import http_error_body, md5_file, resolve_env_key
 
 
 DEFAULT_LOCATION = "us-central1"
@@ -116,8 +116,8 @@ class VeoRendererTool:
         if shot_id is None:
             raise ValueError("VeoRendererTool requires a shot_id")
 
-        project_id = self._project_id or _resolve_env(
-            "GCP_PROJECT_ID", fallback_name="GOOGLE_CLOUD_PROJECT"
+        project_id = self._project_id or resolve_env_key(
+            "GCP_PROJECT_ID", "GOOGLE_CLOUD_PROJECT"
         )
         if not project_id:
             raise RuntimeError(
@@ -190,7 +190,7 @@ class VeoRendererTool:
         try:
             submit_resp = self._post_json(submit_url, token, body)
         except urllib.error.HTTPError as exc:
-            body_text = _error_body(exc)
+            body_text = http_error_body(exc)
             stage = _submit_failure_stage(exc.code, body_text)
             return _failure(
                 stage=stage,
@@ -307,7 +307,7 @@ class VeoRendererTool:
                 stage="download",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=self._model_id,
                 task_id=operation_name,
                 billed_cost_usd=_cost_for(self._model_id, actual_duration),
@@ -327,7 +327,7 @@ class VeoRendererTool:
                 clamp_note=_clamp_note(duration_s, actual_duration),
             )
 
-        md5 = _md5_file(output_path)
+        md5 = md5_file(output_path)
         latency = round(time.time() - started, 3)
         cost = _cost_for(self._model_id, actual_duration)
 
@@ -464,21 +464,6 @@ def _cost_for(model: str, duration_s: int) -> float:
     return round(0.40 * duration_s, 4)
 
 
-def _md5_file(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _error_body(exc: urllib.error.HTTPError) -> str:
-    try:
-        return (exc.read().decode("utf-8", errors="replace"))[:500]
-    except Exception:
-        return f"{exc.code} {exc.reason}"
-
-
 def _submit_failure_stage(http_code: int, body_text: str) -> str:
     """Classify submit-time errors. Content policy would be rare at submit
     (Veo rejects at the operation), but INVALID_ARGUMENT for unsupported
@@ -499,33 +484,6 @@ def _clamp_note(requested: int, actual: int) -> str:
         f"duration clamped: requested {requested}s -> actual {actual}s "
         f"(Veo accepts {{4,6,8}})"
     )
-
-
-def _resolve_env(name: str, *, fallback_name: str | None = None) -> str | None:
-    """Look up `name` in shell env, then fallback_name, then project .env."""
-    v = os.environ.get(name) or (
-        os.environ.get(fallback_name) if fallback_name else None
-    )
-    if v:
-        return v
-    here = Path(__file__).resolve()
-    for parent in (here.parent, *here.parents):
-        env_path = parent / ".env"
-        if env_path.is_file():
-            keys = {name}
-            if fallback_name:
-                keys.add(fallback_name)
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, vraw = line.partition("=")
-                if k.strip() in keys:
-                    vraw = vraw.strip().strip('"').strip("'")
-                    if vraw and not vraw.startswith("<"):
-                        return vraw
-            return None
-    return None
 
 
 def _failure(

@@ -44,6 +44,7 @@ from src.contracts import ContractViolation
 from src.producer import (
     DispatchFailure,
     KlingRendererTool,
+    SeedanceRendererTool,
     VeoRendererTool,
     WanRendererTool,
     check_before_render,
@@ -58,7 +59,15 @@ from src.producer import (
 WAN_PROVIDERS = ("alibaba_wan_2_7_plus", "alibaba_wan_2_7_turbo")
 KLING_PROVIDERS = ("fal_kling_2_1_standard", "fal_kling_2_1_pro")
 VEO_PROVIDERS = ("vertex_veo_3_1_fast",)
-SUPPORTED_PROVIDERS = WAN_PROVIDERS + KLING_PROVIDERS + VEO_PROVIDERS
+SEEDANCE_PROVIDERS = (
+    "fal_bytedance_seedance_2_0_i2v",
+    "fal_bytedance_seedance_2_0_t2v",
+    "fal_bytedance_seedance_2_0_ref",
+    "fal_bytedance_seedance_2_0_fast_i2v",
+    "fal_bytedance_seedance_2_0_fast_t2v",
+    "fal_bytedance_seedance_2_0_fast_ref",
+)
+SUPPORTED_PROVIDERS = WAN_PROVIDERS + KLING_PROVIDERS + VEO_PROVIDERS + SEEDANCE_PROVIDERS
 
 
 def add_subparser(subparsers: "argparse._SubParsersAction[Any]") -> None:
@@ -355,6 +364,19 @@ def _estimate_render_cost(
         # matches what we will actually bill.
         snapped = _snap_veo_duration(duration_s)
         return round(0.10 * snapped, 4), 0
+    if provider_id in SEEDANCE_PROVIDERS:
+        # Seedance per-second pricing at 720p. Resolution is 720p default;
+        # 1080p would be 2.25x but render_cmd passes --resolution downstream
+        # so the adapter reconciles the actual cost. Pre-flight at 720p.
+        seed_d = max(4, min(15, duration_s))
+        is_fast = "fast" in provider_id
+        if "ref" in provider_id:
+            base = 0.1814
+        elif "t2v" in provider_id:
+            base = 0.2419 if is_fast else 0.3034
+        else:
+            base = 0.2419 if is_fast else 0.3024
+        return round(base * seed_d, 4), 0
     # Unknown — let the budget layer decide.
     return 0.0, 0
 
@@ -403,6 +425,59 @@ def _build_tool_and_ctx(
         # here (the router + contracts are the primary gate). The adapter will
         # fail loud if the API rejects the prompt.
         return VeoRendererTool(), ctx
+
+    if provider_id in SEEDANCE_PROVIDERS:
+        # Seedance I2V and ref-to-video variants need image inputs. T2V
+        # variants take none. Mode is inferred from the provider_id; the
+        # shared `_kling_image_url` helper works for I2V refs since fal's
+        # image_url semantics are identical across Kling and Seedance.
+        new_ctx = dict(ctx)
+        if "i2v" in provider_id:
+            image_url = _kling_image_url(shot)
+            if not image_url:
+                raise ValueError(
+                    f"{provider_id} is image-to-video but shot has no "
+                    "prompt.reference_subject_paths[0] / start_frame_path / "
+                    "prompt.image_url. Provide a reference image or route to "
+                    "a text-to-video Seedance variant."
+                )
+            new_ctx["image_url"] = image_url
+        elif "ref" in provider_id:
+            refs = (shot.get("prompt") or {}).get("reference_subject_paths") or []
+            if not refs:
+                raise ValueError(
+                    f"{provider_id} is reference-to-video but shot has no "
+                    "prompt.reference_subject_paths (needs at least one)."
+                )
+            from src.producer import encode_image_as_data_uri
+            # Encode each local ref as a data URI (fal accepts both URLs
+            # and data: URIs for reference_image_urls).
+            encoded: list[str] = []
+            for ref in refs:
+                if ref.startswith(("http://", "https://", "data:")):
+                    encoded.append(ref)
+                else:
+                    try:
+                        encoded.append(encode_image_as_data_uri(ref))
+                    except FileNotFoundError:
+                        pass
+            if not encoded:
+                raise ValueError(
+                    f"{provider_id}: reference_subject_paths contained no "
+                    "resolvable images (none were public URLs or existing files)."
+                )
+            new_ctx["reference_image_urls"] = encoded
+        # T2V variants: nothing to add; payload already has the prompt.
+
+        # End-frame hook — Seedance supports `end_image_url` on all variants.
+        end_frame_path = (shot.get("prompt") or {}).get("end_frame_path")
+        if end_frame_path:
+            try:
+                from src.producer import encode_image_as_data_uri
+                new_ctx["end_image_url"] = encode_image_as_data_uri(end_frame_path)
+            except FileNotFoundError:
+                pass
+        return SeedanceRendererTool(), new_ctx
 
     # Should be unreachable — SUPPORTED_PROVIDERS guards upstream.
     raise ValueError(f"no adapter wired for provider {provider_id!r}")

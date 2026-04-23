@@ -123,7 +123,8 @@ def test_events_db_captures_screenwriter_and_per_shot_prompt(
 
 def test_humans_and_heroes_route_correctly(tmp_path: Path, capsys) -> None:
     """The stub Screenwriter produces alternating humans (even orders) and
-    heroes at orders 1/4/7. Verify the router honors humans-never-veo."""
+    heroes at orders 1/4/7. Verify the router honors humans-never-veo.
+    --run-mode submission is needed because Veo is submission-tier only."""
     brief = _write_brief(tmp_path / "brief.json")
     main(
         [
@@ -136,6 +137,7 @@ def test_humans_and_heroes_route_correctly(tmp_path: Path, capsys) -> None:
             "--capabilities",
             str(CAPABILITIES),
             "--dry-run",
+            "--run-mode", "submission",
             "--json",
         ]
     )

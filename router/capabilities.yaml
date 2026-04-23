@@ -6,7 +6,36 @@
 # Edit cadence: weekly during normal ops, per-shot during a run.
 # Every change should be accompanied by a test in tests/router/.
 
-schema_version: "1.2"
+schema_version: "1.3"
+
+# Run mode gating
+# --------------------------------------------------------------------------
+# Each provider's `run_modes` list declares which usage modes it participates
+# in. The router's `run_mode_compatibility` rule is a symmetric filter-first
+# gate: a provider is removed from the candidate set (before scoring) when
+# shot.run_mode is not in its `run_modes` list.
+#
+#   run_mode="testing"     → only providers with "testing" in run_modes
+#   run_mode="submission"  → only providers with "submission" in run_modes
+#
+# If the filter empties the candidate set, route() raises RoutingError.
+# Silent fallback from testing → submission providers is a feature we
+# explicitly DON'T want — the orchestrator should halt and surface the
+# tier mismatch, not burn submission budget mid-iteration.
+#
+# Tags used:
+#   "submission" = premium providers for the final hackathon deliverable
+#                  (Veo 3.1 Fast, Seedance 2.0 Pro, Kling 2.1 Pro, nano-banana).
+#   "testing"    = cheap/free providers for iteration, orchestrator dogfood,
+#                  contract verification (Wan, Kling Std, Qwen-Image).
+#
+# Dual-tagged ["submission", "testing"] providers work in both lanes
+# (e.g. ElevenLabs — same audio pipeline either way).
+#
+# A provider missing `run_modes` entirely gets a grace pass in both modes;
+# add the tag when the YAML entry is next touched. Manual override of
+# shot.routing.chosen_provider bypasses the router entirely, so operators
+# can still force any provider regardless of tier.
 
 # Role-based tiers. See CLAUDE.md § Provider priority.
 #
@@ -40,6 +69,7 @@ providers:
   alibaba_wan_2_7_plus:
     display_name: "Alibaba Wan 2.7 (text-to-video)"
     modality: video
+    run_modes: ["testing"]         # free-quota, non-US — testing lane only
     access: alibaba_cloud          # DashScope API (Alibaba Cloud Model Studio)
     # Canonical DashScope model id per the Wan text-to-video API reference:
     # https://www.alibabacloud.com/help/en/model-studio/text-to-video-api-reference
@@ -76,6 +106,7 @@ providers:
   alibaba_wan_2_7_turbo:
     display_name: "Alibaba Wan 2.6 (text-to-video)"
     modality: video
+    run_modes: ["testing"]
     access: alibaba_cloud
     # Canonical DashScope model id. Wan 2.6 uses the LEGACY protocol (size parameter).
     # Kept in the 'turbo' slot as the iteration-tier Wan workhorse: earlier model =>
@@ -112,6 +143,7 @@ providers:
   fal_kling_2_1_standard:
     display_name: "Kling 2.1 Standard (via fal.ai)"
     modality: video
+    run_modes: ["testing"]         # cheaper Kling; iteration lane
     access: fal_ai
     model_id: "fal-ai/kling-video/v2.1/standard/image-to-video"
     tier: workhorse
@@ -147,6 +179,7 @@ providers:
   fal_kling_2_1_pro:
     display_name: "Kling 2.1 Pro (via fal.ai)"
     modality: video
+    run_modes: ["submission", "testing"]   # premium human I2V — both lanes
     access: fal_ai
     model_id: "fal-ai/kling-video/v2.1/pro/image-to-video"
     tier: workhorse
@@ -176,9 +209,79 @@ providers:
     known_failures:
       - "still imperfect on very fast camera moves — budget extra attempts"
 
+  fal_bytedance_seedance_2_0_i2v:
+    display_name: "Seedance 2.0 I2V (via fal.ai)"
+    modality: video
+    run_modes: ["submission"]      # premium submission tier (replaces Runway, which fal doesn't host)
+    access: fal_ai
+    # Verified 2026-04-23 via https://fal.ai/models/bytedance/seedance-2.0/image-to-video
+    # Note: fal v2.0 path format OMITS the `fal-ai/` prefix.
+    model_id: "bytedance/seedance-2.0/image-to-video"
+    tier: submission
+    role: "quality-optimized non-human establishing / dynamic camera moves where Veo isn't the right fit"
+    # Per-second 720p: $0.3024. 1080p ≈ 2.25x. Adapter's _cost_for applies
+    # the resolution multiplier; we keep the nominal 720p figure here for
+    # budget pre-flight.
+    cost_per_second_usd: 0.3024
+    max_duration_s: 15
+    supported_resolutions: ["480p", "720p", "1080p"]
+    modes:
+      t2v: false
+      i2v: true
+      r2v: false
+    supports_first_last_frame: true     # via `end_image_url`
+    max_reference_images: 1             # use reference-to-video variant for >1
+    capabilities:
+      non_human_scenes: 0.90
+      human_scenes: 0.60                # strict likeness detector — prefer Kling
+      high_motion: 0.85
+      low_motion: 0.85
+      stylized: 0.80
+      photoreal: 0.90
+      negative_prompt_support: false    # Seedance has no negative_prompt field
+      image_conditioning: true
+      audio_generation: true             # disable via generate_audio=false (adapter forces this)
+    prompt_grammar: seedance_natural_language
+    known_failures:
+      - "pre-generation likeness detector blocks recognizable real people / celebrities"
+      - "re-prompting after content_policy rarely works — route fallback to Kling / Wan"
+      - "NO negative_prompt field; sending one 422s"
+
+  fal_bytedance_seedance_2_0_fast_i2v:
+    display_name: "Seedance 2.0 Fast I2V (via fal.ai)"
+    modality: video
+    run_modes: ["submission"]      # still paid at $0.24/s — submission only; testing stays on Wan/Kling-Std/Qwen
+    access: fal_ai
+    model_id: "bytedance/seedance-2.0/fast/image-to-video"
+    tier: submission
+    role: "cost-optimized Seedance for iteration and shots that don't need the quality bump"
+    cost_per_second_usd: 0.2419
+    max_duration_s: 15
+    supported_resolutions: ["480p", "720p", "1080p"]
+    modes:
+      t2v: false
+      i2v: true
+      r2v: false
+    supports_first_last_frame: true
+    max_reference_images: 1
+    capabilities:
+      non_human_scenes: 0.82
+      human_scenes: 0.55
+      high_motion: 0.75
+      low_motion: 0.80
+      stylized: 0.75
+      photoreal: 0.82
+      negative_prompt_support: false
+      image_conditioning: true
+      audio_generation: true
+    prompt_grammar: seedance_natural_language
+    known_failures:
+      - "same likeness detector as pro tier — route fallback to Kling for humans"
+
   vertex_veo_3_1_fast:
     display_name: "Google Veo 3.1 Fast"
     modality: video
+    run_modes: ["submission"]      # premium hero lane only
     access: vertex_ai
     # Canonical Vertex AI model id — GA since 2025-11-17 (verified 2026-04-23).
     # The preview id veo-3.1-fast-generate-preview was discontinued 2026-04-02.
@@ -217,6 +320,7 @@ providers:
   elevenlabs:
     display_name: "ElevenLabs"
     modality: audio
+    run_modes: ["submission", "testing"]   # US audio provider; same for both
     access: elevenlabs_api
     tier: workhorse
     role: "all audio — dialogue, SFX, (music stubbed)"
@@ -294,3 +398,7 @@ hard_rules:
   - id: "prefer_kling_pro_when_refs_or_end_frame"
     description: "When a shot has multiple subject refs OR an end-frame, Kling Pro's stronger consistency justifies the price delta over Standard."
     predicate: "(len(shot.prompt.reference_subject_paths or []) > 1 OR shot.prompt.end_frame_path != null) AND provider == 'fal_kling_2_1_standard' → DEPRIORITIZE"
+
+  - id: "run_mode_compatibility"
+    description: "Gate providers by run_mode — submission-lane shots skip non-US / free-quota providers; testing-lane shots skip premium ones to keep iteration cheap."
+    predicate: "provider.run_modes is not null AND shot.run_mode not in provider.run_modes → EXCLUDE"

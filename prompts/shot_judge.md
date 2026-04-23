@@ -33,11 +33,30 @@ Final score: `judge_score = mean(composition, prompt_adherence, continuity) - ar
 
 ## Decision thresholds
 
-- `judge_score >= 0.75` AND no artifact flag → `outcome: approved`.
+- `judge_score >= 0.75` AND no artifact flag AND no volatility signal → `outcome: approved`.
+- `judge_score >= 0.75` BUT the attempts history shows volatile scores (see §"Volatility escalation") → `outcome: escalated`, `escalation_reason: volatile_scores`.
 - `0.4 <= judge_score < 0.75` → `outcome: rejected`, `rejection_reason` set (see below). Send back for a new attempt.
-- `judge_score < 0.4` OR `len(shots[i].attempts) >= 3` → `outcome: rejected`, and set shot `status` to `escalated`. Producer will decide whether to override-approve, swap providers, or drop the shot.
+- `judge_score < 0.4` → `outcome: escalated`, `escalation_reason: below_threshold`.
+- `len(shots[i].attempts) >= 3` AND the current attempt did not land `approved` → `outcome: escalated`, `escalation_reason: max_attempts_exhausted`.
 
-`rejection_reason` must be one of: `auto_judge` (score below threshold), `continuity` (score OK but breaks a `continuity_ref` shot), `artifact` (hard flag fired), `timeout` (render didn't complete; rare — Renderer usually owns this before handoff).
+Escalated is a terminal state the Producer treats differently from rejected — no retry, the shot goes to the human-review pile with the escalation_reason surfaced in the film summary.
+
+`rejection_reason` (for outcome=rejected) must be one of: `auto_judge` (score below approve but above escalate), `continuity` (score OK but breaks a `continuity_ref` shot), `artifact` (hard flag fired), `timeout` (render didn't complete; rare — Renderer usually owns this before handoff).
+
+`escalation_reason` (for outcome=escalated) must be one of:
+- `below_threshold` — score < 0.40; the render is too broken for another prompt revision to fix.
+- `max_attempts_exhausted` — we've given this shot 3 shots and it still isn't landing. Higher attempt counts mean the problem is upstream (wrong provider, wrong reference, wrong creative direction); more retries compound cost without signal.
+- `volatile_scores` — see §"Volatility escalation" below.
+
+## Volatility escalation
+
+When the same shot has been rendered multiple times, look at the scores across attempts before stamping `approved`. If the score trajectory is volatile — for example, 0.78 then 0.67 then 0.83 — the pipeline isn't *reliably* producing a good result for this shot; we just got lucky on the current attempt. A human should confirm which take ships rather than trust the auto-approve.
+
+**Rule**: if `len(shots[i].attempts) >= 3` AND any two attempts' `judge_score` values differ by ≥ 0.10 AND the current attempt would otherwise score `approved`, escalate instead with `escalation_reason: volatile_scores`.
+
+Why this exists: the prompt, the reference image, or the provider's temperature is producing unstable output. A 0.83 render sandwiched between 0.78 and 0.67 says "this shot *can* land but doesn't consistently" — exactly the signal that should surface for human eyes, not silent approval.
+
+The Producer's orchestrator will treat `volatile_scores` escalation as terminal (won't retry) and will surface it in the film summary as a distinct category from `below_threshold` and `max_attempts_exhausted`. Three different human-review signals; don't collapse them.
 
 ## Your writes
 
@@ -47,8 +66,9 @@ For every attempt you judge, append to `attempts[-1]`:
 {
   "judge_score": <float 0..1>,
   "judge_notes": "<specific, concrete observations — what you saw>",
-  "outcome": "approved | rejected",
-  "rejection_reason": "<only when rejected>",
+  "outcome": "approved | rejected | escalated",
+  "rejection_reason": "<only when outcome == rejected>",
+  "escalation_reason": "<only when outcome == escalated — one of: below_threshold, max_attempts_exhausted, volatile_scores>",
   "approved_by": "shot_judge"  // only when outcome == approved
 }
 ```

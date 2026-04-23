@@ -1,0 +1,167 @@
+{
+  "_note": "Integration fixture for FilmOrchestrator per-shot loop. Captured from a real live run of sh_005 v1/v2/v3 on 2026-04-23. The fixture's `starting_shot` is the manifest state the orchestrator received when dispatching v3 (i.e., v1 and v2 already in attempts[], shot in 'rejected' status after v2's judge). The `tool_results` are the actual outputs from v3's live render and judge. The `expected_final` is the correct post-v3 state under the NEW escalation rules (volatility detection fires because prior scores [0.783, 0.667] + current 0.833 span > 0.10).",
+  "_provenance": {
+    "captured_at": "2026-04-23",
+    "live_manifest_path": "/tmp/rv-live/state/manifest.json",
+    "trajectory": "v1 approved 0.783, v2 rejected 0.667, v3 escalated 0.833 (volatile)"
+  },
+  "starting_shot": {
+    "shot_id": "sh_005",
+    "scene": 2,
+    "order": 5,
+    "description": "The lighthouse keeper pushes the door open and steps inside.",
+    "duration_s": 3.75,
+    "has_humans": false,
+    "is_hero": false,
+    "motion_level": "low",
+    "continuity_refs": [],
+    "prompt": {
+      "authored_by": "prompt_smith",
+      "primary": "Same figure as reference image, same clothing, same lighthouse doorway. Phase 1: gloved hand grips the iron handle. Phase 2: he pushes the weathered wooden door inward with slow, deliberate weight. Phase 3: he steps across the threshold into the interior shadow. Handheld camera follows in a gentle push-in behind his shoulder, slight organic sway, unhurried pacing. Quiet, solitary mood. Cold naturalistic tone preserved from reference. Avoid: scene change, background change, different figure, different door, morphing hands, teleporting body, fast motion, lens flare.",
+      "negative": "",
+      "reference_subject_paths": [
+        "artifacts/refs/sh_006_v1.png"
+      ]
+    },
+    "routing": {
+      "chosen_provider": "fal_bytedance_seedance_2_0_i2v",
+      "chosen_model": "bytedance/seedance-2.0/image-to-video",
+      "rationale": "manual override for Seedance live smoke test (submission tier)",
+      "decided_by": "operator",
+      "decided_at": "2026-04-23T16:30:00.000000Z",
+      "alternates": []
+    },
+    "attempts": [
+      {
+        "attempt_id": 1,
+        "provider": "fal_bytedance_seedance_2_0_i2v",
+        "started_at": "2026-04-23T16:35:00.000000Z",
+        "completed_at": "2026-04-23T16:37:04.000000Z",
+        "cost_usd": 1.512,
+        "latency_s": 125.197,
+        "render_path": "artifacts/renders/sh_005/v1.mp4",
+        "judge_score": 0.783,
+        "judge_notes": "Figure approaches lighthouse from distance...",
+        "outcome": "approved",
+        "approved_by": "shot_judge"
+      },
+      {
+        "attempt_id": 2,
+        "provider": "fal_bytedance_seedance_2_0_i2v",
+        "started_at": "2026-04-23T17:30:00.000000Z",
+        "completed_at": "2026-04-23T17:32:32.000000Z",
+        "cost_usd": 1.512,
+        "latency_s": 152.13,
+        "render_path": "artifacts/renders/sh_005/v2.mp4",
+        "judge_score": 0.667,
+        "judge_notes": "Setting and framing diverge meaningfully from the prompt...",
+        "outcome": "rejected",
+        "rejection_reason": "auto_judge"
+      }
+    ],
+    "status": "rejected",
+    "history": [
+      {
+        "ts": "2026-04-23T16:35:00.000000Z",
+        "event": "rendering",
+        "by": "renderer",
+        "detail": "attempt 1"
+      },
+      {
+        "ts": "2026-04-23T16:37:04.000000Z",
+        "event": "judging",
+        "by": "renderer",
+        "detail": "attempt 1 rendered"
+      },
+      {
+        "ts": "2026-04-23T16:37:20.000000Z",
+        "event": "judged_approved",
+        "by": "shot_judge",
+        "detail": "score=0.783 mode=vision"
+      },
+      {
+        "ts": "2026-04-23T17:30:00.000000Z",
+        "event": "rendering",
+        "by": "renderer",
+        "detail": "attempt 2"
+      },
+      {
+        "ts": "2026-04-23T17:32:32.000000Z",
+        "event": "judging",
+        "by": "renderer",
+        "detail": "attempt 2 rendered"
+      },
+      {
+        "ts": "2026-04-23T17:32:45.000000Z",
+        "event": "judged_rejected",
+        "by": "shot_judge",
+        "detail": "score=0.667 mode=vision"
+      }
+    ],
+    "judge_feedback": [],
+    "creative_feedback": []
+  },
+  "tool_results": {
+    "render": {
+      "status": "ok",
+      "provider": "fal_bytedance_seedance_2_0_i2v",
+      "model": "bytedance/seedance-2.0/image-to-video",
+      "task_id": "req_seed_v3",
+      "render_path": "artifacts/renders/sh_005/v3.mp4",
+      "render_md5": "a78f58646042948db6c43c1082b42ffb",
+      "output_size_bytes": 1820016,
+      "cost_usd": 1.512,
+      "quota_cost": 0,
+      "latency_s": 99.638,
+      "requested_duration_s": 4,
+      "actual_duration_s": 4,
+      "resolution": "720p",
+      "aspect_ratio": "16:9",
+      "stdout_tail": "",
+      "stderr_tail": ""
+    },
+    "judge": {
+      "judge_score": 0.833,
+      "composition": 0.82,
+      "prompt_adherence": 0.78,
+      "continuity": 0.9,
+      "artifact_flag": false,
+      "judge_notes": "Three-phase action reads cleanly across keyframes: figure approaches door, pushes it inward, and steps through threshold into interior shadow \u2014 matches the prompt's Phase 1/2/3 beats. Handheld framing is over-the-shoulder with gentle push-in as specified. Cold naturalistic palette preserved.",
+      "feedback": [
+        {
+          "feedback_type": "composition",
+          "severity": "note",
+          "observation": "Over-the-shoulder framing reads cleanly; shoulder line held consistent."
+        }
+      ],
+      "outcome": "escalated",
+      "rejection_reason": null,
+      "escalation_reason": "volatile_scores",
+      "mode": "vision",
+      "model": "claude-opus-4-7",
+      "usage": {
+        "input_tokens": 4820,
+        "output_tokens": 412
+      }
+    }
+  },
+  "expected_final": {
+    "shot_status": "escalated",
+    "attempts_count": 3,
+    "final_attempt": {
+      "attempt_id": 3,
+      "outcome": "rejected",
+      "judge_score": 0.833,
+      "render_path": "artifacts/renders/sh_005/v3.mp4",
+      "render_md5": "a78f58646042948db6c43c1082b42ffb",
+      "rejection_reason": "auto_judge",
+      "escalation_reason": "volatile_scores"
+    },
+    "history_events_include": [
+      "rendering",
+      "judging",
+      "judged_escalated"
+    ],
+    "judge_feedback_count": 1
+  }
+}

@@ -59,12 +59,16 @@ from .manifest_io import (
     save_manifest_atomic,
     validate_manifest,
 )
+from .audio import ElevenLabsAudioTool, VOICE_PRESETS
 from .kling import KlingRendererTool, encode_image_as_data_uri
 from .nano_banana import NanoBananaImageTool
+from .orchestrator import FilmOrchestrator, ToolSet
+from .orchestrator_types import FilmResult, RetryPolicy, ShotSummary
 from .prompt_smith import PromptSmithTool
 from .qwen_image import QwenImageTool
 from .renderer import WanRendererTool
 from .screenwriter import ScreenwriterTool
+from .seedance import SeedanceRendererTool
 from .shot_judge import ShotJudgeTool
 from .types import DispatchFailure, DispatchResult, Tool
 from .veo import VeoRendererTool
@@ -84,10 +88,13 @@ __all__ = [
     "WanRendererTool",
     "KlingRendererTool",
     "VeoRendererTool",
+    "SeedanceRendererTool",
     "QwenImageTool",
     "NanoBananaImageTool",
     "encode_image_as_data_uri",
     "ShotJudgeTool",
+    "ElevenLabsAudioTool",
+    "VOICE_PRESETS",
     "LLMClient",
     "LLMResponse",
     "LLMError",
@@ -107,4 +114,9 @@ __all__ = [
     "BudgetExceeded",
     "check_before_render",
     "record_spend",
+    "FilmOrchestrator",
+    "ToolSet",
+    "FilmResult",
+    "RetryPolicy",
+    "ShotSummary",
 ]

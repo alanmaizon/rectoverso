@@ -30,8 +30,15 @@ def test_human_shot_routes_to_kling(capabilities, make_shot, make_budget):
 
 
 def test_non_human_hero_shot_routes_to_veo(capabilities, make_shot, make_budget):
-    """Hero + non-human + low motion → Veo, the whole point of the specialty tier."""
-    shot = make_shot(has_humans=False, is_hero=True, motion_level="low", duration_s=5.0)
+    """Hero + non-human + low motion → Veo, the whole point of the specialty tier.
+    Run mode must be "submission" — Veo is submission-tier only."""
+    shot = make_shot(
+        has_humans=False,
+        is_hero=True,
+        motion_level="low",
+        duration_s=5.0,
+        run_mode="submission",
+    )
     choice = route(shot, make_budget(), capabilities)
     assert choice.provider_id == VEO
 

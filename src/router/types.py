@@ -40,6 +40,12 @@ class ShotSpec:
     modality: str = "video"  # "video" | "audio"
     # Audio-only: used by elevenlabs_credits_exhausted rule.
     estimated_credit_cost: int = 0
+    # Run mode gate — set by the Producer based on whether this is a final
+    # hackathon-submission run (premium US providers only) or a test/iteration
+    # run (free-quota + cheap models). Providers self-declare which modes they
+    # belong to via `run_modes` in capabilities.yaml. "testing" is the safe
+    # default so internal iteration doesn't accidentally burn submission spend.
+    run_mode: str = "testing"  # "submission" | "testing"
 
 
 @dataclass(frozen=True)

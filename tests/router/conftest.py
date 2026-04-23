@@ -45,6 +45,9 @@ def make_shot() -> Callable[..., ShotSpec]:
             "has_end_frame": False,
             "modality": "video",
             "estimated_credit_cost": 0,
+            # ShotSpec defaults to run_mode="testing" which gates out
+            # submission-only providers (Veo). Tests that want Veo pass
+            # run_mode="submission" explicitly.
         }
         defaults.update(overrides)
         return ShotSpec(**defaults)

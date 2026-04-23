@@ -76,12 +76,26 @@ def _ctx(
     render_path: Path,
     *,
     attempts: int = 0,
+    prior_scores: list[float] | None = None,
     continuity_refs: list[str] | None = None,
     primary: str = "A quiet shot of the ocean.",
     negative: str = "",
     artistic_direction: str = "",
     brief_tone: list[str] | None = None,
 ) -> dict:
+    # prior_scores: optional judge_score values to stamp onto the prior
+    # attempts (used by volatility tests). The CURRENT attempt is the last
+    # one in the list and gets no prior score (the judge call itself will
+    # produce it). So prior_scores is applied to attempts[:-1].
+    attempts_list = [
+        {"attempt_id": i + 1, "provider": "x"} for i in range(attempts)
+    ]
+    if prior_scores:
+        # Score the first len(prior_scores) attempts, leave the last attempt
+        # unscored (it's the one about to be judged).
+        to_score = attempts_list[: len(prior_scores)]
+        for a, s in zip(to_score, prior_scores):
+            a["judge_score"] = s
     return {
         "shot": {
             "shot_id": "sh_001",
@@ -89,7 +103,7 @@ def _ctx(
             "duration_s": 3.0,
             "prompt": {"primary": primary, "negative": negative},
             "continuity_refs": continuity_refs or [],
-            "attempts": [{"attempt_id": i + 1, "provider": "x"} for i in range(attempts)],
+            "attempts": attempts_list,
             "artistic_direction": artistic_direction,
         },
         "render_path": str(render_path),
@@ -123,28 +137,51 @@ def test_compute_judge_score_artifact_penalty() -> None:
 
 
 def test_decide_outcome_branches() -> None:
+    # Return tuple shape: (outcome, rejection_reason, escalation_reason)
     assert _decide_outcome(judge_score=0.9, artifact_flag=False, attempts_count=1) == (
         "approved",
         None,
+        None,
     )
-    # artifact forces rejection even above threshold
-    outcome, reason = _decide_outcome(
+    # Artifact forces rejection even above approve threshold
+    outcome, rej, esc = _decide_outcome(
         judge_score=0.9, artifact_flag=True, attempts_count=1
     )
-    assert outcome == "rejected" and reason == "artifact"
-    outcome, reason = _decide_outcome(
+    assert outcome == "rejected" and rej == "artifact" and esc is None
+    # Mid-range score, early attempt: rejected/auto_judge (retry possible)
+    outcome, rej, esc = _decide_outcome(
         judge_score=0.6, artifact_flag=False, attempts_count=1
     )
-    assert outcome == "rejected" and reason == "auto_judge"
-    outcome, reason = _decide_outcome(
+    assert outcome == "rejected" and rej == "auto_judge" and esc is None
+    # Below escalate threshold: escalated/below_threshold
+    outcome, rej, esc = _decide_outcome(
         judge_score=0.2, artifact_flag=False, attempts_count=1
     )
-    assert outcome == "escalated" and reason == "auto_judge"
-    # Attempts cap forces escalation even with a passing score
-    outcome, _ = _decide_outcome(
-        judge_score=0.9, artifact_flag=False, attempts_count=MAX_ATTEMPTS_BEFORE_ESCALATE
+    assert outcome == "escalated" and rej is None and esc == "below_threshold"
+    # Max attempts + NON-approving score: escalated/max_attempts_exhausted
+    outcome, rej, esc = _decide_outcome(
+        judge_score=0.6,
+        artifact_flag=False,
+        attempts_count=MAX_ATTEMPTS_BEFORE_ESCALATE,
     )
-    assert outcome == "escalated"
+    assert outcome == "escalated" and esc == "max_attempts_exhausted"
+    # Max attempts + stable approving score: APPROVED (retry count doesn't
+    # override a legitimate pass; that's the bug the v3 A/B surfaced)
+    outcome, rej, esc = _decide_outcome(
+        judge_score=0.9,
+        artifact_flag=False,
+        attempts_count=MAX_ATTEMPTS_BEFORE_ESCALATE,
+        prior_scores=[0.85, 0.88],
+    )
+    assert outcome == "approved" and rej is None and esc is None
+    # Max attempts + volatile approving score: escalated/volatile_scores
+    outcome, rej, esc = _decide_outcome(
+        judge_score=0.83,
+        artifact_flag=False,
+        attempts_count=MAX_ATTEMPTS_BEFORE_ESCALATE,
+        prior_scores=[0.78, 0.67],
+    )
+    assert outcome == "escalated" and esc == "volatile_scores"
 
 
 # ---------------------------------------------------------------------------
@@ -255,14 +292,79 @@ def test_vision_mode_escalated_below_floor(tmp_path: Path) -> None:
     assert result["outcome"] == "escalated"
 
 
-def test_attempts_cap_escalates_even_with_good_score(tmp_path: Path) -> None:
+def test_attempts_cap_with_stable_good_score_approves(tmp_path: Path) -> None:
+    """Max-attempts on a STABLE, approving score is approved — retry count
+    shouldn't override a legitimate pass. This is the behavior change the
+    sh_005 v3 A/B surfaced.
+    """
     response = json.dumps(
         {
             "composition": 0.85,
             "prompt_adherence": 0.80,
             "continuity": 0.90,
             "artifact_flag": False,
-            "judge_notes": "Looks fine but this is attempt 3.",
+            "judge_notes": "Looks fine and trajectory is stable.",
+        }
+    )
+    tool = ShotJudgeTool(
+        client=StubClient(responses=[response]),
+        ffmpeg_bin="/fake/ffmpeg",
+        extract_frames=_inject_frames(3),
+        system_prompt="SYSTEM",
+    )
+    # Prior scores are clustered (stable); current is a pass. No volatility.
+    result = tool(
+        shot_id="sh_001",
+        payload=_ctx(
+            _make_render(tmp_path),
+            attempts=MAX_ATTEMPTS_BEFORE_ESCALATE,
+            prior_scores=[0.82, 0.85],
+        ),
+    )
+    assert result["outcome"] == "approved"
+    assert result["escalation_reason"] is None
+
+
+def test_attempts_cap_with_volatile_good_score_escalates(tmp_path: Path) -> None:
+    """Max-attempts + volatile trajectory + approving current score triggers
+    volatile_scores escalation. Pipeline produced this take but not reliably."""
+    response = json.dumps(
+        {
+            "composition": 0.85,
+            "prompt_adherence": 0.80,
+            "continuity": 0.90,
+            "artifact_flag": False,
+            "judge_notes": "Looks fine; earlier attempts were much weaker.",
+        }
+    )
+    tool = ShotJudgeTool(
+        client=StubClient(responses=[response]),
+        ffmpeg_bin="/fake/ffmpeg",
+        extract_frames=_inject_frames(3),
+        system_prompt="SYSTEM",
+    )
+    # Mirrors sh_005's actual v1/v2/v3 trajectory: 0.78, 0.67, ~0.83.
+    result = tool(
+        shot_id="sh_001",
+        payload=_ctx(
+            _make_render(tmp_path),
+            attempts=MAX_ATTEMPTS_BEFORE_ESCALATE,
+            prior_scores=[0.78, 0.67],
+        ),
+    )
+    assert result["outcome"] == "escalated"
+    assert result["escalation_reason"] == "volatile_scores"
+
+
+def test_attempts_cap_with_mid_score_escalates_max_attempts(tmp_path: Path) -> None:
+    """Max-attempts + NON-approving score = max_attempts_exhausted."""
+    response = json.dumps(
+        {
+            "composition": 0.60,
+            "prompt_adherence": 0.60,
+            "continuity": 0.70,
+            "artifact_flag": False,
+            "judge_notes": "Still not landing after three tries.",
         }
     )
     tool = ShotJudgeTool(
@@ -273,9 +375,14 @@ def test_attempts_cap_escalates_even_with_good_score(tmp_path: Path) -> None:
     )
     result = tool(
         shot_id="sh_001",
-        payload=_ctx(_make_render(tmp_path), attempts=MAX_ATTEMPTS_BEFORE_ESCALATE),
+        payload=_ctx(
+            _make_render(tmp_path),
+            attempts=MAX_ATTEMPTS_BEFORE_ESCALATE,
+            prior_scores=[0.58, 0.62],
+        ),
     )
     assert result["outcome"] == "escalated"
+    assert result["escalation_reason"] == "max_attempts_exhausted"
 
 
 # ---------------------------------------------------------------------------

@@ -30,14 +30,14 @@ coalesced into `alibaba_quota_remaining`).
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Mapping
+
+from ._common import http_error_body, md5_file, resolve_env_key
 
 
 QWEN_SUBMIT_URL = (
@@ -183,7 +183,7 @@ class QwenImageTool:
                 extra_headers={"X-DashScope-Async": "enable"},
             )
         except urllib.error.HTTPError as exc:
-            body_text = _error_body(exc)
+            body_text = http_error_body(exc)
             stage = _submit_failure_stage(exc.code, body_text)
             return _failure(
                 stage=stage,
@@ -278,7 +278,7 @@ class QwenImageTool:
                 stage="download",
                 started=started,
                 poll_log=poll_log,
-                stderr=_error_body(exc),
+                stderr=http_error_body(exc),
                 model=model,
                 task_id=task_id,
                 size=size,
@@ -296,7 +296,7 @@ class QwenImageTool:
                 size=size,
             )
 
-        md5 = _md5_file(output_path)
+        md5 = md5_file(output_path)
         latency = round(time.time() - started, 3)
 
         result: dict[str, Any] = {
@@ -370,39 +370,7 @@ class QwenImageTool:
 
 def _resolve_dashscope_key() -> str | None:
     """Resolve DASHSCOPE_API_KEY from shell env, then project .env."""
-    v = os.environ.get("DASHSCOPE_API_KEY")
-    if v:
-        return v
-    here = Path(__file__).resolve()
-    for parent in (here.parent, *here.parents):
-        env_path = parent / ".env"
-        if env_path.is_file():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, vraw = line.partition("=")
-                if k.strip() == "DASHSCOPE_API_KEY":
-                    vraw = vraw.strip().strip('"').strip("'")
-                    if vraw and not vraw.startswith("<"):
-                        return vraw
-            return None
-    return None
-
-
-def _md5_file(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(64 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def _error_body(exc: urllib.error.HTTPError) -> str:
-    try:
-        return (exc.read().decode("utf-8", errors="replace"))[:500]
-    except Exception:
-        return f"{exc.code} {exc.reason}"
+    return resolve_env_key("DASHSCOPE_API_KEY")
 
 
 def _submit_failure_stage(http_code: int, body_text: str) -> str:

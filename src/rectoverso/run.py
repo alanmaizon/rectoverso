@@ -118,6 +118,17 @@ def add_subparser(subparsers: "argparse._SubParsersAction[Any]") -> None:
         help="skip Anthropic calls; use a deterministic stub (no USD/credits spent)",
     )
     p.add_argument(
+        "--run-mode",
+        choices=("submission", "testing"),
+        default="testing",
+        help=(
+            "provider tier to target. 'testing' (default) uses free-quota + "
+            "cheap models for iteration. 'submission' uses premium US providers "
+            "(Veo 3.1 Fast, Kling Pro) for the final deliverable — burns paid "
+            "budget, so do this only for finals."
+        ),
+    )
+    p.add_argument(
         "--json",
         action="store_true",
         help="emit a JSON summary to stdout instead of the pretty log",
@@ -148,6 +159,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             capabilities_path=args.capabilities,
             screenwriter=screenwriter,
             prompt_smith=prompt_smith,
+            run_mode=args.run_mode,
         )
     except BriefError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -180,6 +192,7 @@ def run(
     capabilities_path: Path,
     screenwriter: ScreenwriterTool,
     prompt_smith: PromptSmithTool,
+    run_mode: str = "testing",
 ) -> dict[str, Any]:
     """Execute the driver. Pure of argparse so tests can call this directly.
 
@@ -222,7 +235,7 @@ def run(
         ps_usage_totals: dict[str, int] = {}
         for shot in manifest["shots"]:
             # router is a sync worker; we log its decision as a standalone event.
-            choice = _route_shot(shot, manifest, capabilities)
+            choice = _route_shot(shot, manifest, capabilities, run_mode=run_mode)
             _project_routing(shot, choice)
             last_id = _write_router_event(events, shot["shot_id"], choice)
             save_manifest_atomic(manifest_path, manifest, last_event_id=last_id)
@@ -412,6 +425,14 @@ def _project_screenwriter(
                 ],
                 "judge_feedback": [],
                 "creative_feedback": [],
+                # Audio scaffolding — orchestrator's audio phase consumes
+                # audio_cues after the shot approves. Empty list means the
+                # operator hasn't hand-authored any cues yet (Screenwriter
+                # doesn't populate this in v1; the prompt update is a
+                # post-submission follow-up). audio_status="pending" until
+                # the orchestrator's audio phase decides ok/partial/failed/skipped.
+                "audio_cues": list(s.get("audio_cues") or []),
+                "audio_status": "pending",
             }
         )
     manifest["shots"] = shots_out
@@ -486,6 +507,8 @@ def _route_shot(
     shot: Mapping[str, Any],
     manifest: Mapping[str, Any],
     capabilities,
+    *,
+    run_mode: str = "testing",
 ) -> ProviderChoice:
     prompt = shot.get("prompt") or {}
     spec = ShotSpec(
@@ -501,6 +524,7 @@ def _route_shot(
         ),
         reference_subject_count=len(prompt.get("reference_subject_paths") or []),
         has_end_frame="end_frame_path" in prompt,
+        run_mode=run_mode,
     )
     b = manifest.get("budget", {})
     budget = BudgetState(

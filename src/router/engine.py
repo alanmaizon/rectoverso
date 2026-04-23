@@ -54,6 +54,22 @@ def load_capabilities(path: str | Path | None = None) -> Capabilities:
     if not providers:
         raise ValueError("capabilities.yaml has no providers")
 
+    # Every video provider must carry a canonical model_id — downstream adapters
+    # build API URLs from it. Audio providers (ElevenLabs) use per-use-case
+    # model selection via `default_models` instead and are exempt.
+    missing_model_id = [
+        pid
+        for pid, pdef in providers.items()
+        if str(pdef.get("modality", "")).lower() == "video"
+        and not pdef.get("model_id")
+    ]
+    if missing_model_id:
+        raise ValueError(
+            f"capabilities.yaml: video providers missing `model_id`: "
+            f"{missing_model_id}. Without it, the router would emit "
+            f"chosen_model=<provider_id> and break the downstream adapter."
+        )
+
     return Capabilities(
         raw=raw,
         providers=providers,
@@ -196,6 +212,44 @@ def _rule_prefer_kling_pro_when_refs_or_end_frame(
     return None
 
 
+def _rule_run_mode_compatibility(
+    shot: ShotSpec, budget: BudgetState, provider_id: str, provider: Mapping[str, Any]
+) -> RuleOutcome:
+    """Gate the router's automatic candidate set by run_mode.
+
+    Symmetric filter-first rule: a provider is kept only if `shot.run_mode`
+    is in its `run_modes` list. Untagged providers (no `run_modes` field)
+    pass both modes as a backwards-compat grace pass — add the tag when the
+    entry is next touched.
+
+    - run_mode == "testing"     → only keep providers with "testing" in run_modes
+    - run_mode == "submission"  → only keep providers with "submission" in run_modes
+
+    Filter-first (returns "exclude", not "deprioritize") means the candidate
+    set is pared down BEFORE capability scoring runs. Scoring then picks the
+    best valid choice among surviving providers. The alternative — score
+    first, then override — could select a provider that doesn't actually fit
+    the shot's requirements (e.g., an I2V shot overridden to a T2V-only
+    cheap provider). Filter-first guarantees the winner is both valid for
+    the shot and allowed in the run mode.
+
+    Halt-on-no-match is free: if the filter empties the candidate set,
+    route() raises RoutingError with exclusions-by-rule detail. That's the
+    intended signal — "testing mode has no cheap provider for this shot"
+    should surface, not silent-fall-through to expensive providers.
+
+    This rule applies to the router's automatic selection. Operators can
+    still manually override `shot.routing.chosen_provider` to any provider;
+    direct overrides bypass the router entirely.
+    """
+    run_modes = provider.get("run_modes")
+    if run_modes is None:
+        return None  # legacy / untagged — grace pass
+    if shot.run_mode not in run_modes:
+        return "exclude"
+    return None
+
+
 HARD_RULES: dict[str, HardRule] = {
     "humans_never_veo": _rule_humans_never_veo,
     "veo_spend_cap": _rule_veo_spend_cap,
@@ -209,6 +263,7 @@ HARD_RULES: dict[str, HardRule] = {
     "end_frame_requires_capable_provider": _rule_end_frame_requires_capable_provider,
     "subject_refs_fit_capacity": _rule_subject_refs_fit_capacity,
     "prefer_kling_pro_when_refs_or_end_frame": _rule_prefer_kling_pro_when_refs_or_end_frame,
+    "run_mode_compatibility": _rule_run_mode_compatibility,
 }
 
 
@@ -354,9 +409,12 @@ def route(
     rationale = _build_rationale(shot, winner_id, winner, winner_score, winner_deprio)
     alternates = tuple(pid for pid, _, _, _ in survivors[1:4])
 
+    # load_capabilities guarantees model_id is present for video providers.
+    # For audio providers (ElevenLabs) that omit it, fall back to provider_id
+    # since their downstream adapter picks model via default_models instead.
     return ProviderChoice(
         provider_id=winner_id,
-        model_id=str(winner.get("model_id", winner_id)),
+        model_id=str(winner.get("model_id") or winner_id),
         estimated_cost_usd=_estimate_cost(shot, winner),
         rationale=rationale,
         alternates=alternates,

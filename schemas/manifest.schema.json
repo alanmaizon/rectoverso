@@ -221,6 +221,32 @@
           "type": "string",
           "description": "Creative style/mood guidance for this shot (e.g., 'slow, deliberate motion' or 'film noir lighting')"
         },
+        "audio_cues": {
+          "type": "array",
+          "description": "Per-shot audio dispatch list consumed by the Audio Agent. Each entry is a single SFX or TTS call the orchestrator fires after the shot approves. Empty list = no audio for this shot; Editor falls back to silence or operator-supplied ambient track from inputs/audio/.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode"],
+            "properties": {
+              "mode": { "enum": ["sfx", "tts"] },
+              "sfx_id": { "type": "string", "description": "Label used when mode=sfx; projects into audio.sfx[].sfx_id" },
+              "description": { "type": "string", "description": "SFX prompt text when mode=sfx" },
+              "duration_s": { "type": "number", "minimum": 0.5, "maximum": 30.0 },
+              "prompt_influence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+              "line_id": { "type": "string", "description": "Label used when mode=tts; projects into audio.dialogue[].line_id" },
+              "text": { "type": "string", "description": "Spoken text when mode=tts" },
+              "voice_id": { "type": "string", "description": "ElevenLabs voice id when mode=tts" },
+              "model_id": { "type": "string" },
+              "language_code": { "type": "string" },
+              "seed": { "type": "integer" }
+            }
+          }
+        },
+        "audio_status": {
+          "description": "Audio-phase outcome, tracked independently of shot.status so an audio failure does NOT escalate an otherwise-approved shot. 'pending' = not yet dispatched; 'skipped' = no cues on the shot; 'ok' = every cue generated; 'partial' = some cues failed, some succeeded; 'failed' = all cues failed.",
+          "enum": ["pending", "ok", "partial", "failed", "skipped"]
+        },
         "budget_decision": {
           "type": "object",
           "additionalProperties": false,
@@ -258,6 +284,10 @@
         "judge_notes": { "type": "string" },
         "outcome": { "enum": ["pending", "approved", "rejected", "failed"] },
         "rejection_reason": { "enum": ["auto_judge", "user", "continuity", "artifact", "timeout"] },
+        "escalation_reason": {
+          "enum": ["below_threshold", "max_attempts_exhausted", "volatile_scores"],
+          "description": "Populated when the shot status is escalated. Distinguishes human-review signals: below_threshold = render too broken to revise, max_attempts_exhausted = retry loop gave up, volatile_scores = pipeline produced this take but not reliably."
+        },
         "approved_by": { "type": "string" },
         "error": { "type": "string" }
       },
