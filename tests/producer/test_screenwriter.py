@@ -79,7 +79,7 @@ def test_happy_path_returns_shots_and_summary() -> None:
     assert result["summary"]["total_duration_s"] == 30.0
     assert result["summary"]["within_duration_bound"] is True
     # The stub echoes the model arg (same as the real SDK).
-    assert result["model"].startswith("claude-opus")
+    assert result["model"].startswith("claude-haiku")
     assert "raw" not in result  # default: not included
 
 

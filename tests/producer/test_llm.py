@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from src.producer.llm import (
-    DEFAULT_MAX_TOKENS,
+    TIER3_MAX_TOKENS,
     LLMEmptyResponse,
     LLMJSONDecodeError,
     LLMResponse,
@@ -104,8 +104,8 @@ def test_default_model_and_max_tokens() -> None:
     client = StubClient(text="{}")
     call_json(system="sys", user="u", client=client)
     call = client.calls[-1]
-    assert call["max_tokens"] == DEFAULT_MAX_TOKENS
-    assert call["model"].startswith("claude-opus")
+    assert call["max_tokens"] == TIER3_MAX_TOKENS
+    assert call["model"].startswith("claude-haiku")
 
 
 def test_explicit_model_override() -> None:

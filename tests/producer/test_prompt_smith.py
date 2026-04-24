@@ -90,7 +90,7 @@ def test_happy_path_returns_prompt_fields() -> None:
     assert result["primary"].startswith("An empty platform")
     assert result["negative"] == ""
     assert result["reference_image_paths"] == []
-    assert result["model"].startswith("claude-opus")
+    assert result["model"].startswith("claude-haiku")
 
 
 def test_user_payload_includes_shot_routing_brief() -> None:

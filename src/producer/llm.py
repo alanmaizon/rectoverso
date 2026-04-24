@@ -44,7 +44,16 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROMPTS_DIR = REPO_ROOT / "prompts"
 
 DEFAULT_MODEL = "claude-opus-4-7"
+# Tier-3 agents (Screenwriter, PromptSmith) are single-turn JSON generation with
+# no vision or tool use — Haiku 4.5 is sufficient and ~95% cheaper than Opus 4.7.
+TIER3_MODEL = "claude-haiku-4-5-20251001"
+# Shot Judge does multi-image vision evaluation — Sonnet 4.6 keeps accuracy while
+# saving ~80% vs Opus 4.7.
+VISION_MODEL = "claude-sonnet-4-6"
 DEFAULT_MAX_TOKENS = 4096
+# Tier-3 JSON outputs are compact (shot list or single prompt object).
+# 2048 tokens is well above the p99 output size and cuts per-call cost ~50%.
+TIER3_MAX_TOKENS = 2048
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +220,7 @@ def call_json(
     user: str,
     client: LLMClient | None = None,
     model: str | None = None,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
+    max_tokens: int = TIER3_MAX_TOKENS,
 ) -> tuple[Any, LLMResponse]:
     """Call the model with a cached system prompt and a user message; parse JSON.
 
@@ -226,7 +235,7 @@ def call_json(
         LLMJSONDecodeError: the text was not parseable JSON.
     """
     eff_client = client or default_client()
-    eff_model = model or os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL)
+    eff_model = model or os.environ.get("TIER3_MODEL", os.environ.get("ANTHROPIC_MODEL", TIER3_MODEL))
 
     # system with explicit prompt caching on the invariant block
     system_blocks = [
