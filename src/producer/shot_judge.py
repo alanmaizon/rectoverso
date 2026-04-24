@@ -44,7 +44,7 @@ from typing import Any, Mapping
 
 from .llm import (
     DEFAULT_MAX_TOKENS,
-    DEFAULT_MODEL,
+    VISION_MODEL,
     LLMClient,
     LLMEmptyResponse,
     LLMJSONDecodeError,
@@ -148,7 +148,7 @@ class ShotJudgeTool:
         )
 
         client = self._client or default_client()
-        model = self._model or os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL)
+        model = self._model or os.environ.get("ANTHROPIC_MODEL", VISION_MODEL)
 
         system_blocks = [
             {

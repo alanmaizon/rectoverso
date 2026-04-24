@@ -52,7 +52,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .llm import (
-    DEFAULT_MAX_TOKENS,
+    TIER3_MAX_TOKENS,
     LLMClient,
     call_json,
     load_system_prompt,
@@ -83,7 +83,7 @@ class PromptSmithTool:
         self,
         client: LLMClient | None = None,
         model: str | None = None,
-        max_tokens: int = DEFAULT_MAX_TOKENS,
+        max_tokens: int = TIER3_MAX_TOKENS,
     ) -> None:
         self._client = client
         self._model = model
