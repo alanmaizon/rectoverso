@@ -33,6 +33,12 @@ artifacts/audio/**/*.mp3
 artifacts/audio/**/*.m4a
 artifacts/edit/*.mp4
 artifacts/edit/*.mov
+artifacts/storybook/**/*.mp4
+artifacts/storybook/**/*.png
+artifacts/dragon_tortoise/**/*.mp4
+artifacts/dragon_tortoise/**/*.png
+site/media/shots/**/*.mp4
+site/media/shots/**/*.png
 
 # Demo fixtures — large; stored elsewhere (see demo/README.md when created)
 demo/fixtures/**/*.mp4

@@ -1,0 +1,95 @@
+
+{
+  "title": "The Little Fish and His Horse Friend",
+  "format": "animated_video",
+  "duration_seconds": "60-120",
+  "style": "whimsical watercolor children's animation, soft fantasy, warm pastel palette, gentle lighting, cinematic depth",
+  "language": "English",
+  "characters": {
+    "little_fish": {
+      "traits": ["curious", "playful", "gentle", "observant"],
+      "visual": "small colorful fish with soft blue and turquoise tones, fluid graceful movement, expressive eyes"
+    },
+    "horse_friend": {
+      "traits": ["kind", "strong", "protective", "grounded"],
+      "visual": "friendly horse with warm brown tones, soft features, calm presence near the water’s edge"
+    }
+  },
+  "visual_motifs": {
+    "water_health": "water starts clear and vibrant, becomes cloudy and dull, then returns to clean and lively",
+    "connection": "ripples in water reflect emotional connection between fish and horse"
+  },
+  "recurring_phrase": "Water is life, we must take care of it.",
+  "scenes": [
+    {
+      "scene": 1,
+      "description": "A bright, clear river under morning light. The little fish swims happily while the horse drinks water by the shore.",
+      "camera": "Wide establishing shot, gentle pan across river and shore",
+      "animation": "Sparkling water, soft reflections, smooth swimming motion",
+      "narration": "In a clear river, the little fish swam happily, and his horse friend stayed close by the shore."
+    },
+    {
+      "scene": 2,
+      "description": "The fish playfully jumps out of the water, greeting the horse.",
+      "camera": "Medium shot, slight upward motion following the fish jump",
+      "animation": "Water splash particles, horse reacts gently",
+      "narration": "Hello, my friend! The water feels wonderful today."
+    },
+    {
+      "scene": 3,
+      "description": "The horse smiles and looks at the river.",
+      "camera": "Close-up on horse, soft background blur",
+      "animation": "Subtle head movement, calm breathing",
+      "narration": "The horse nodded. This river gives us life."
+    },
+    {
+      "scene": 4,
+      "description": "Leaves and small debris begin to float into the water.",
+      "camera": "Wide shot slowly tightening on polluted area",
+      "animation": "Water loses clarity slightly, floating particles increase",
+      "narration": "But one day, something changed. The water was not as clear."
+    },
+    {
+      "scene": 5,
+      "description": "The fish looks worried as the water becomes cloudy.",
+      "camera": "Close-up underwater shot, dimmer lighting",
+      "animation": "Fish slows movement, particles in water drift around",
+      "narration": "The little fish felt uneasy. It was harder to see and breathe."
+    },
+    {
+      "scene": 6,
+      "description": "The horse notices and steps closer to the river, concerned.",
+      "camera": "Medium shot from shore perspective",
+      "animation": "Horse leans in, ears slightly lowered",
+      "narration": "The horse looked closely. The river needs help."
+    },
+    {
+      "scene": 7,
+      "description": "They begin to act together—horse clearing debris near shore, fish guiding movement in water.",
+      "camera": "Tracking shot showing teamwork",
+      "animation": "Debris slowly moves away, coordinated actions",
+      "narration": "Together, they worked carefully. Little by little, they helped the river."
+    },
+    {
+      "scene": 8,
+      "description": "The water begins to clear, light returns beneath the surface.",
+      "camera": "Wide shot with light rays entering water",
+      "animation": "Particles fade, colors become vibrant again",
+      "narration": "The water slowly became clear again. Water is life, we must take care of it."
+    },
+    {
+      "scene": 9,
+      "description": "The fish swims energetically again while the horse watches happily.",
+      "camera": "Medium wide shot, balanced composition",
+      "animation": "Lively swimming, gentle ripples",
+      "narration": "The little fish smiled. The river was alive again."
+    },
+    {
+      "scene": 10,
+      "description": "Sunset over the river, both friends resting peacefully.",
+      "camera": "Wide cinematic shot, slow fade out",
+      "animation": "Warm sunset tones, calm water reflections",
+      "narration": "And from that day on, they cared for their home. Water is life, we must take care of it."
+    }
+  ]
+}

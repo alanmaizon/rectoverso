@@ -15,7 +15,7 @@ A quiet montage of places most of us will never stand in — and the one we alre
 
 The film is an orchestral breath. No high concept, no visual trick — just six places on Earth, rendered with the kind of patience nature documentaries earn over years of waiting, and a child's voice laid gently over the top, as if reading a thought out loud. The camera moves the way drones and steadicams actually move: slow, honest, long. Golden hour where it's golden. Silver blue where the north is cold. No swoops, no whip-pans, no stylization. The awe is in the photography — not in the edit.
 
-Each location arrives in full. The reef is wet and populated. The delta is wide and mirror-flat. The canopy is windy and tall. The ice is still. The kitchen — where the film lands — is ordinary, and that is the point. The child's voiceover does not narrate the places; it thinks alongside them. The orchestra, sparse and string-led, swells once at the midpoint and subsides before the final shot, leaving the last beat to a single held note and the sound of a home.
+Each location arrives in full. The reef is wet and populated. The delta is wide and mirror-flat. The canopy is windy and tall. The ice is still. The glaciers are ancient, and that is the point. The child's voiceover does not narrate the places; it thinks alongside them. The orchestra, sparse and string-led, swells once at the midpoint and subsides before the final shot, leaving the last beat to a single held note and the sound of a home.
 
 Palette is warm-neutral — the color of honest light. Cuts are clean: dissolves where the emotion asks for continuity, hard cuts where the geography wants to change. The film is about attention. It works because it refuses to show off.
 
@@ -53,11 +53,11 @@ A held wide shot of a frozen lake under aurora, steam rising from a thermal vent
 - motion_level: low
 - audio_cue: silence (near-total; only the crack of ice and the fox's breath)
 
-**sh_006** | 10s | Kitchen, Ireland (morning)
-Soft profile of a child, age ~7, standing in the doorway of their own kitchen in warm morning light. A parent at the sink, unaware. A cat on a chair. The child looks at the kitchen the way one might look at a reef. Slow push-in on the child's face — recognition, not delight. The orchestra returns quietly.
-- human_presence: true (child in profile, parent silhouette at sink)
-- motion_level: low
-- audio_cue: ambient (kitchen sounds, tap running, a spoon against ceramic)
+**sh_006** | 10s | Vatnajökull Glacier, Iceland (dusk)
+A slow, sweeping panoramic drone shot over a massive blue glacier. Deep crevasses and ancient ice stretching to the horizon. The light is fading, casting long, stark shadows. The orchestra returns quietly.
+- human_presence: false
+- motion_level: medium
+- audio_cue: sfx (low wind over ice, deep glacial groans)
 
 **sh_007** | 6s | Closing image — wide exterior, Ireland
 A clean, wide exterior shot of the cottage at dawn, smoke lifting from the chimney, the same soft gold as sh_001. Held. The orchestra resolves on a single sustained string note. Cut to black.
@@ -87,14 +87,14 @@ A clean, wide exterior shot of the cottage at dawn, smoke lifting from the chimn
 > (over sh_005 — the fox looks; the VO waits; no words)
 >
 > (over sh_006)
-> "And a kitchen, in a quiet morning, where someone you love is making tea."
+> "And a frozen expanse of ancient ice, shifting under its own weight."
 >
 > (over sh_007, just before the cut)
 > "All of it. Here."
 
 **Total spoken words:** ~40.
 
-**Sound design principle:** Each location arrives fully — the reef is wet, the delta is wide, the canopy is windy, the ice is silent, the kitchen is domestic. Ambient and sfx layers are never ornamental. The orchestra is the emotional thread; the places are the argument; the voice is the thought that connects them.
+**Sound design principle:** Each location arrives fully — the reef is wet, the delta is wide, the canopy is windy, the ice is silent, the glaciers are groaning. Ambient and sfx layers are never ornamental. The orchestra is the emotional thread; the places are the argument; the voice is the thought that connects them.
 
 ---
 
@@ -114,4 +114,4 @@ One card, white type on black, held 3 seconds after the final cut (additive to t
 ---
 
 **Execution notes for downstream agents:**
-The film's power depends on restraint and photography. Each shot is a standalone vignette — no portal effects, no match-cuts across impossible geographies, no particle effects or transition sparkles. Camera moves are the moves drones and steadicams actually make: slow, honest, long. Color grading is warm-neutral, not postcard-saturated. The child in sh_006 must not smile; the register is recognition, not delight. The orchestra must never instruct the viewer how to feel — it sits underneath the images like weather. When in doubt, hold the shot longer.
+The film's power depends on restraint and photography. Each shot is a standalone vignette — no portal effects, no match-cuts across impossible geographies, no particle effects or transition sparkles. Camera moves are the moves drones and steadicams actually make: slow, honest, long. Color grading is warm-neutral, not postcard-saturated. The orchestra must never instruct the viewer how to feel — it sits underneath the images like weather. When in doubt, hold the shot longer.

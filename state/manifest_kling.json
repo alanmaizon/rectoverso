@@ -1,0 +1,430 @@
+{
+  "audio": {
+    "dialogue": [],
+    "sfx": []
+  },
+  "brief": {
+    "genre": "documentary",
+    "logline": "A quiet montage of places most of us will never stand in \u2014 and the one we already do \u2014 carried by a single voice remembering that all of them are the same planet.",
+    "source_path": "brief.md",
+    "target_duration_s": 60.0,
+    "tone": [
+      "restrained",
+      "cinematic",
+      "warm-neutral",
+      "documentary"
+    ]
+  },
+  "budget": {
+    "alibaba_quota_remaining": 75,
+    "by_provider": {},
+    "cap_usd": 151.0,
+    "editor_estimate_usd": 0.0,
+    "elevenlabs_credits_remaining": 117999,
+    "spent_usd": 0.0
+  },
+  "created_at": "2026-04-24T15:11:09.045318Z",
+  "creative_decisions": [],
+  "edit": {
+    "renderer": "hyperframes",
+    "renderer_version": "v1.0.0",
+    "status": "pending"
+  },
+  "film_status": "pending",
+  "manifest_version": "1.0",
+  "project_id": "proj_here_kling",
+  "run_state": {
+    "current_stage": "make",
+    "last_event_id": 0,
+    "resumable": true
+  },
+  "script": {
+    "approved_at": "2026-04-24T14:54:11.872996Z",
+    "approved_by": "producer",
+    "path": "brief.md",
+    "status": "approved",
+    "version": 1
+  },
+  "shots": [
+    {
+      "attempts": [],
+      "audio_cues": [],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Enniskerry, Ireland \u2014 quiet hallway at dawn.",
+      "duration_s": 6.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "low",
+      "order": 1,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Interior cinematic wide of a narrow hallway in a small Irish cottage at dawn. Warm soft morning light spills from a single window at the far end of the hall. Dust motes drift slowly through the shaft of light. Worn wooden floorboards, faded wallpaper, a framed photo on the wall. Camera is locked off \u2014 completely still. Warm-neutral color palette, honest golden tones, not postcard-saturated. 35mm film aesthetic, documentary stillness. No people, no animals.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_001_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 1,
+      "shot_id": "sh_001",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [
+        {
+          "duration_s": 4.18,
+          "language_code": "en",
+          "line_id": "sh_002_vo_1",
+          "mode": "tts",
+          "model_id": "eleven_multilingual_v2",
+          "text": "There are places on this planet you will never stand in.",
+          "voice_id": "child_narrator"
+        }
+      ],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Great Barrier Reef, Australia \u2014 mid-water, late afternoon sun.",
+      "duration_s": 10.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "medium",
+      "order": 2,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Underwater cinematic wide shot inside the Great Barrier Reef, mid-water at late afternoon. Sun shafts cut down through clear blue water. A living coral reef \u2014 healthy, colorful, vivid but not cartoonish. A school of tropical parrotfish slowly parts and reforms in the foreground. Camera drifts forward at constant gentle pace, honest diver-POV. Visible particulate and believable light refraction. BBC Blue Planet documentary reference. No text, no divers, no equipment.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_002_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 2,
+      "shot_id": "sh_002",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [
+        {
+          "duration_s": 1.9,
+          "language_code": "en",
+          "line_id": "sh_003_vo_1",
+          "mode": "tts",
+          "model_id": "eleven_multilingual_v2",
+          "text": "A flood at golden hour.",
+          "voice_id": "child_narrator"
+        }
+      ],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Okavango Delta, Botswana \u2014 aerial at golden hour, elephants wading.",
+      "duration_s": 10.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "medium",
+      "order": 3,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Aerial wide shot drifting low and slow over the Okavango Delta at golden hour. Mirror-flat shallow water catches the warm orange sunset; reeds cut the surface in long parallel lines. Three elephants wade in the frame, water dragging behind them, reflections doubled on the flat surface. Camera moves at a steady slow exhale pace \u2014 low altitude, no banking, no drama. Distant birds on the horizon. Warm-neutral grade. Photographed on a cinema drone. No text, no aircraft visible, no humans.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_003_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 3,
+      "shot_id": "sh_003",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [
+        {
+          "duration_s": 3.04,
+          "language_code": "en",
+          "line_id": "sh_004_vo_1",
+          "mode": "tts",
+          "model_id": "eleven_multilingual_v2",
+          "text": "A canopy you cannot reach except by wing.",
+          "voice_id": "child_narrator"
+        }
+      ],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Amazon canopy, Peru \u2014 wingtip-height aerial tracking shot.",
+      "duration_s": 9.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "high",
+      "order": 4,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Aerial wingtip-height tracking shot 40 metres above the Amazon rainforest canopy. Uninterrupted green canopy stretches to a misty horizon. The camera flies forward at a constant even speed \u2014 no tilt, no bank, no swoop. A single macaw with red and blue plumage crosses frame left-to-right in the mid-ground. Late morning diffuse light, occasional humidity haze rising from the trees. BBC Planet Earth nature-documentary reference. No text, no aircraft, no people.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_004_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 4,
+      "shot_id": "sh_004",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Hokkaido, Japan \u2014 frozen lake at night under aurora, a red fox crossing.",
+      "duration_s": 9.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "low",
+      "order": 5,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Wide locked-off shot of a frozen lake at night in Hokkaido, Japan, deep winter. Snow-dusted ice in the foreground, dark fir trees at the far shore, green and violet aurora borealis overhead with a subtle reflection on the ice. A single plume of white steam rises from a thermal vent at the shoreline. A red fox walks across the ice from mid-left toward the centre of frame, stops, turns its head to look directly at the camera, and holds the gaze for a long beat. Camera is completely still. Cold blue-silver colour palette. Long-exposure look, quiet stillness.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_005_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 5,
+      "shot_id": "sh_005",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [
+        {
+          "duration_s": 5.32,
+          "language_code": "en",
+          "line_id": "sh_006_vo_1",
+          "mode": "tts",
+          "model_id": "eleven_multilingual_v2",
+          "text": "And a kitchen, in a quiet morning, where someone you love is making tea.",
+          "voice_id": "child_narrator"
+        }
+      ],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Kitchen, Ireland \u2014 child in profile in the doorway, morning.",
+      "duration_s": 10.0,
+      "has_humans": true,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "low",
+      "order": 6,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Cinematic interior medium shot of a child aged about 7 standing in the doorway of a small Irish cottage kitchen in soft warm morning light. The child is in profile \u2014 we see the side of their face, calm and thoughtful, NOT smiling. Simple pyjamas. In the background, a parent silhouetted at the sink with back to camera, tap running. A tabby cat sits on a wooden chair. Camera starts medium wide and pushes in very slowly on the child's face over the full duration. Warm-neutral natural light, 35mm film look, documentary realism. No dialogue, no smiling, no eye contact with camera.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_006_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 6,
+      "shot_id": "sh_006",
+      "status": "prompted"
+    },
+    {
+      "attempts": [],
+      "audio_cues": [
+        {
+          "duration_s": 1.52,
+          "language_code": "en",
+          "line_id": "sh_007_vo_1",
+          "mode": "tts",
+          "model_id": "eleven_multilingual_v2",
+          "text": "All of it. Here.",
+          "voice_id": "child_narrator"
+        }
+      ],
+      "audio_status": "pending",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "Closing image \u2014 exterior wide of the Enniskerry cottage at dawn.",
+      "duration_s": 6.0,
+      "has_humans": false,
+      "history": [
+        {
+          "by": "prompt_smith",
+          "detail": "prompt authored",
+          "event": "prompted",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        },
+        {
+          "by": "producer",
+          "detail": "-> fal_kling_2_1_pro",
+          "event": "routed",
+          "ts": "2026-04-24T15:11:09.045318Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "low",
+      "order": 7,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "text, watermark, logo, timestamps, subtitle, caption, lens flare, sparkles, portal effect, morphing, doorway, doorframe in frame, cartoon, anime, oversaturation, fast camera whip pan, shaky cam, film grain overlay",
+        "primary": "Wide exterior shot of a small whitewashed Irish cottage at dawn, seen from across a dewy field. Soft golden morning light hits the front of the cottage; a thin plume of woodsmoke rises straight up from the stone chimney into still air. Mossy stone walls in the foreground, distant green hills. Camera is locked off, completely still. Warm-neutral palette, golden hour. Large-format camera aesthetic, documentary feel. No people, no animals, no vehicles, no text.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_007_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "fal-ai/kling-video/v2.1/pro/image-to-video",
+        "chosen_provider": "fal_kling_2_1_pro",
+        "decided_at": "2026-04-24T15:11:09.045318Z",
+        "decided_by": "producer",
+        "rationale": "variant film \u2014 all shots routed to fal_kling_2_1_pro"
+      },
+      "scene": 7,
+      "shot_id": "sh_007",
+      "status": "prompted"
+    }
+  ],
+  "updated_at": "2026-04-24T15:17:48.004591Z"
+}
