@@ -1,0 +1,152 @@
+{
+  "audio": {
+    "dialogue": [],
+    "sfx": []
+  },
+  "brief": {
+    "genre": "drama",
+    "logline": "A lighthouse keeper pushes the door open and steps inside.",
+    "source_path": "brief.md",
+    "target_duration_s": 4.0,
+    "tone": [
+      "cinematic",
+      "moody"
+    ]
+  },
+  "budget": {
+    "alibaba_quota_remaining": 50,
+    "by_provider": {
+      "fal_bytedance_seedance_2_0_i2v": 3.024
+    },
+    "cap_usd": 100.0,
+    "editor_estimate_usd": 8.5,
+    "elevenlabs_credits_remaining": 100000,
+    "spent_usd": 0.0
+  },
+  "created_at": "2026-04-23T16:00:00Z",
+  "creative_decisions": [],
+  "edit": {
+    "composition_archive_path": "artifacts/edit/proj_demo_composition.zip",
+    "composition_path": "artifacts/edit/hyperframes.json",
+    "render_md5": "ccbb586460429482b42ffbccbb586460",
+    "render_path": "artifacts/edit/proj_demo_final.mp4",
+    "renderer": "hyperframes",
+    "renderer_version": "v1.0.0",
+    "status": "approved",
+    "total_duration_s": 4.0
+  },
+  "film_status": "composed",
+  "manifest_version": "1.0",
+  "project_id": "proj_demo",
+  "run_state": {
+    "current_stage": "make",
+    "last_event_id": 0,
+    "resumable": true
+  },
+  "script": {
+    "approved_at": "2026-04-23T16:00:00Z",
+    "approved_by": "director",
+    "path": "script.md",
+    "status": "approved",
+    "version": 1
+  },
+  "shots": [
+    {
+      "attempts": [
+        {
+          "approved_by": "shot_judge",
+          "attempt_id": 1,
+          "completed_at": "2026-04-23T16:01:00Z",
+          "cost_usd": 0.0,
+          "judge_notes": "Perfect execution of the brief. Cold naturalistic tone preserved.",
+          "judge_score": 0.91,
+          "outcome": "approved",
+          "provider": "fal_bytedance_seedance_2_0_i2v",
+          "render_path": "artifacts/renders/sh_005/v3.mp4",
+          "started_at": "2026-04-23T16:00:00Z"
+        }
+      ],
+      "audio_cues": [],
+      "audio_status": "skipped",
+      "continuity_refs": [],
+      "creative_feedback": [],
+      "description": "The lighthouse keeper pushes the door open and steps inside.",
+      "duration_s": 3.75,
+      "final": {
+        "attempt_id": 1,
+        "normalized_md5": "bbbb586460429482b42ffbbbb5864604",
+        "normalized_path": "artifacts/renders/sh_005/v3.mp4",
+        "render_path": "artifacts/renders/sh_005/v3.mp4"
+      },
+      "has_humans": false,
+      "history": [
+        {
+          "by": "renderer",
+          "detail": "attempt 1",
+          "event": "rendering",
+          "ts": "2026-04-23T16:35:00.000000Z"
+        },
+        {
+          "by": "renderer",
+          "detail": "attempt 1 rendered",
+          "event": "judging",
+          "ts": "2026-04-23T16:37:04.000000Z"
+        },
+        {
+          "by": "shot_judge",
+          "detail": "score=0.783 mode=vision",
+          "event": "judged_approved",
+          "ts": "2026-04-23T16:37:20.000000Z"
+        },
+        {
+          "by": "renderer",
+          "detail": "attempt 2",
+          "event": "rendering",
+          "ts": "2026-04-23T17:30:00.000000Z"
+        },
+        {
+          "by": "renderer",
+          "detail": "attempt 2 rendered",
+          "event": "judging",
+          "ts": "2026-04-23T17:32:32.000000Z"
+        },
+        {
+          "by": "shot_judge",
+          "detail": "score=0.667 mode=vision",
+          "event": "judged_rejected",
+          "ts": "2026-04-23T17:32:45.000000Z"
+        },
+        {
+          "by": "normalizer",
+          "detail": "md5=bbbb5864 size=1024 latency=1.20s",
+          "event": "normalized",
+          "ts": "2026-04-24T07:55:39.327734Z"
+        }
+      ],
+      "is_hero": false,
+      "judge_feedback": [],
+      "motion_level": "low",
+      "order": 5,
+      "prompt": {
+        "authored_by": "prompt_smith",
+        "negative": "",
+        "primary": "Same figure as reference image, same clothing, same lighthouse doorway. Phase 1: gloved hand grips the iron handle. Phase 2: he pushes the weathered wooden door inward with slow, deliberate weight. Phase 3: he steps across the threshold into the interior shadow. Handheld camera follows in a gentle push-in behind his shoulder, slight organic sway, unhurried pacing. Quiet, solitary mood. Cold naturalistic tone preserved from reference. Avoid: scene change, background change, different figure, different door, morphing hands, teleporting body, fast motion, lens flare.",
+        "reference_subject_paths": [
+          "artifacts/refs/sh_006_v1.png"
+        ]
+      },
+      "routing": {
+        "alternates": [],
+        "chosen_model": "bytedance/seedance-2.0/image-to-video",
+        "chosen_provider": "fal_bytedance_seedance_2_0_i2v",
+        "decided_at": "2026-04-23T16:30:00.000000Z",
+        "decided_by": "operator",
+        "rationale": "manual override for Seedance live smoke test (submission tier)"
+      },
+      "scene": 2,
+      "shot_id": "sh_005",
+      "status": "approved"
+    }
+  ],
+  "updated_at": "2026-04-24T07:55:51.701275Z"
+}

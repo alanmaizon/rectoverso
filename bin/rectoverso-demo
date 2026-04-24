@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# rectoverso CLI wrapper for DEMO MODE.
+# Guarantees zero API calls. Uses pre-generated fixtures.
+
+set -euo pipefail
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+export RECTOVERSO_DEMO_MODE=1
+
+echo "==> Running in DEMO MODE (zero API calls) <=="
+
+# 1. Scaffold the golden manifest & mock events
+"${repo_root}/scripts/make_golden_demo.py"
+
+# 2. Copy the golden manifest to state
+cp "${repo_root}/demo/fixtures/manifest_golden.json" "${repo_root}/state/manifest.json"
+
+# 3. Export the site
+"${repo_root}/scripts/export_site.py"
+
+echo "==> Demo mode complete. Output exported to site/ <=="
+echo "==> Run: python3 -m http.server -d site 8080"

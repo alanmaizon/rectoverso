@@ -1,4 +1,4 @@
-# FILM BRIEF — "Built with Opus 4.7" Hackathon Final Round
+# FILM BRIEF — "Built with Opus 4.7" Hackathon
 **Client:** RectoVerso Productions (dellamaison)
 **Campaign:** International Earth Day 2026
 **Runtime:** 60 seconds
@@ -7,63 +7,63 @@
 
 ## 1. LOGLINE
 
-A child turns an ordinary handle and discovers that every door on Earth is already open to every other place we've forgotten to love.
+A quiet montage of places most of us will never stand in — and the one we already do — carried by a single voice remembering that all of them are the same planet.
 
 ---
 
 ## 2. TREATMENT
 
-The film feels like waking up inside a memory you didn't know you had. Soft morning light, the hush of a house before anyone else is up, and then — a door. Not a portal effect, not a flash. Just a door that opens the way doors always open, revealing a world that shouldn't be on the other side of it. The transitions are quiet. The camera doesn't gasp. Neither does the child. The awe is in the ordinariness of the threshold and the impossibility of the room beyond.
+The film is an orchestral breath. No high concept, no visual trick — just six places on Earth, rendered with the kind of patience nature documentaries earn over years of waiting, and a child's voice laid gently over the top, as if reading a thought out loud. The camera moves the way drones and steadicams actually move: slow, honest, long. Golden hour where it's golden. Silver blue where the north is cold. No swoops, no whip-pans, no stylization. The awe is in the photography — not in the edit.
 
-Each door is a small act of attention. A reed curtain in a Bangkok alley opens onto a coral reef mid-bloom. A service door in Lagos opens onto the Okavango at flood. A train-carriage door in rural Peru opens onto the canopy of the Amazon from above, wingtip-height. The film moves through these without narration, trusting the viewer to feel the geography shifting under their feet. The palette is warm and slightly desaturated — honest color, not postcard color. Sound is the argument: the film is almost silent except for the places, which arrive fully present the moment a door swings open.
+Each location arrives in full. The reef is wet and populated. The delta is wide and mirror-flat. The canopy is windy and tall. The ice is still. The kitchen — where the film lands — is ordinary, and that is the point. The child's voiceover does not narrate the places; it thinks alongside them. The orchestra, sparse and string-led, swells once at the midpoint and subsides before the final shot, leaving the last beat to a single held note and the sound of a home.
 
-The final door is the turn. It doesn't lead somewhere wondrous. It leads back — to the child's own kitchen, now seen for the first time as a place on Earth, continuous with everywhere else. The motif reframes: the wonder was never elsewhere. The door was the lesson. Closing image is a hand on a handle that hasn't been turned yet.
+Palette is warm-neutral — the color of honest light. Cuts are clean: dissolves where the emotion asks for continuity, hard cuts where the geography wants to change. The film is about attention. It works because it refuses to show off.
 
 ---
 
 ## 3. SHOT LIST
 
-**sh_001** | 5s | Enniskerry, Ireland (interior cottage, dawn)
-A child's hand, age ~7, rests on a worn brass door handle in a quiet hallway. Slow push-in on the hand. The handle turns. Cut on the motion. Establishes the rule: this film is about thresholds.
-- human_presence: true (hand only, gestural)
+**sh_001** | 6s | Enniskerry, Ireland (interior cottage, dawn)
+Wide, still frame of a quiet hallway in soft morning light. Dust motes. A single window at the end of the hall glows gold. No people. The film begins in stillness.
+- human_presence: false
 - motion_level: low
 - audio_cue: ambient (house-quiet, a distant kettle, one bird outside)
 
 **sh_002** | 10s | Great Barrier Reef, Australia (underwater)
-The door swings open and we are already inside the reef, mid-water, late afternoon sun shafting down. A school of parrotfish parts around the open doorframe, which floats impossibly upright in the current. Camera drifts forward through the frame. The reef is alive — not pristine, not bleached, honestly vivid.
+Slow drifting camera through the reef, mid-water, late afternoon sun shafting down from above. A school of parrotfish parts and reforms around the lens. The reef is alive — not pristine, not bleached, honestly vivid. Held long enough to breathe.
 - human_presence: false
 - motion_level: medium
 - audio_cue: sfx (muffled underwater hush, distant whale-song at the edge of hearing)
 
-**sh_003** | 10s | Lagos, Nigeria → Okavango Delta, Botswana
-A battered metal service door in a Lagos side-street, heat shimmer, laundry overhead. It opens onto the Okavango at flood: elephants wading at golden hour, water mirror-flat, reeds parting. Camera dollies through the doorway in one continuous move. The city sound on one side, the delta on the other — the audio crossfades on the threshold.
-- human_presence: true (silhouette of a woman in the Lagos alley, back to camera, witnessing)
+**sh_003** | 10s | Okavango Delta, Botswana (golden hour)
+Aerial wide shot, drifting low over the flood at golden hour: elephants wading, water mirror-flat, reeds parting in the wake. The camera moves at the speed of a slow exhale. No cut until the orchestra finishes its first phrase.
+- human_presence: false
 - motion_level: medium
-- audio_cue: ambient (Lagos street → delta birdsong, clean crossfade on the doorframe)
+- audio_cue: ambient (delta birdsong, distant elephant rumble, water displacement)
 
-**sh_004** | 9s | Cusco, Peru → Amazon canopy (aerial)
-A train-carriage door slides open as the train sits still at a rural platform. Through it: the Amazon canopy from 40 metres up, wingtip-height, a macaw crossing frame left-to-right. Camera pushes out through the door and the world opens vertically — we are flying. No VFX showiness; it is simply true.
+**sh_004** | 9s | Amazon canopy, Peru (aerial)
+Wingtip-height pass across the Amazon canopy from 40 metres up. A macaw crosses frame left-to-right. The camera flies forward without tilt, without drama — the scale is the content.
 - human_presence: false
 - motion_level: high
-- audio_cue: sfx (train idle → wind and canopy, macaw call)
+- audio_cue: sfx (wind over canopy, macaw call, the low hush of living forest)
 
 **sh_005** | 9s | Hokkaido, Japan (winter, night)
-A paper shoji door in a dim ryokan corridor. It slides open onto a frozen lake under aurora, steam rising from a thermal vent, a single red fox crossing the ice and pausing to look at camera. Held wide. The fox holds the gaze for a full beat. This is the emotional peak — stillness, recognition, the planet looking back.
+A held wide shot of a frozen lake under aurora, steam rising from a thermal vent at the far shore. A single red fox crosses the ice and pauses to look at the camera. The fox holds the gaze for a full beat. This is the emotional peak — stillness, recognition, the planet looking back. The orchestra drops out entirely for the length of the look.
 - human_presence: false
 - motion_level: low
 - audio_cue: silence (near-total; only the crack of ice and the fox's breath)
 
-**sh_006** | 10s | The turn — child's kitchen, Ireland
-The child (same hand from sh_001, now we see the whole child in soft profile) opens the last door expecting another world. It opens onto their own kitchen. Morning light. A parent at the sink, unaware. A cat on a chair. The child stands in the doorway and looks at the kitchen the way they looked at the reef. Slow push-in on the child's face — not disappointment, recognition. This place is also Earth.
+**sh_006** | 10s | Kitchen, Ireland (morning)
+Soft profile of a child, age ~7, standing in the doorway of their own kitchen in warm morning light. A parent at the sink, unaware. A cat on a chair. The child looks at the kitchen the way one might look at a reef. Slow push-in on the child's face — recognition, not delight. The orchestra returns quietly.
 - human_presence: true (child in profile, parent silhouette at sink)
 - motion_level: low
 - audio_cue: ambient (kitchen sounds, tap running, a spoon against ceramic)
 
-**sh_007** | 7s | Closing image — any door, anywhere
-A wide, clean shot of a single closed door. Could be any of the doors we've seen; the pipeline should select the Enniskerry cottage door from sh_001 for continuity. A hand — not the child's, an adult hand, any skin tone, ungendered — reaches into frame and rests on the handle. Does not turn it. Hold. Cut to black.
-- human_presence: true (hand only)
+**sh_007** | 6s | Closing image — wide exterior, Ireland
+A clean, wide exterior shot of the cottage at dawn, smoke lifting from the chimney, the same soft gold as sh_001. Held. The orchestra resolves on a single sustained string note. Cut to black.
+- human_presence: false
 - motion_level: low
-- audio_cue: silence (one breath in, then cut)
+- audio_cue: ambient (morning birdsong, a kettle whistle in the distance, one breath, then cut)
 
 **Total runtime:** 60 seconds exactly.
 
@@ -71,21 +71,36 @@ A wide, clean shot of a single closed door. Could be any of the doors we've seen
 
 ## 4. AUDIO DIRECTION
 
-**Music:** A single sustained piano motif in C major, three notes, repeating with slow variation. Enters at sh_002, drops out entirely at sh_005 (the fox), returns quietly under sh_006, resolves on the final note at the cut to black. Reference texture: Nils Frahm's sparser work, Dustin O'Halloran. No swell. No percussion. The music must never instruct the viewer how to feel.
+**Music:** Sparse orchestral, string-led. A small ensemble — strings, one woodwind, no percussion. Enters under sh_002 with a single sustained chord. Builds gently through sh_003 and sh_004 into one quiet swell at the midpoint. Drops out entirely for the length of sh_005 (the fox). Returns under sh_006 at low volume. Resolves on a single sustained note across sh_007 and cuts with the black. Reference texture: Max Richter's quieter work, Ólafur Arnalds' orchestral passages, the opening of *The Blue Planet*. No triumph. No rise-and-fall manipulation. The music is weather, not argument.
 
-**Voiceover:** One line only, spoken by a child, in English, gentle, unperformed — as if thinking aloud. Delivered over sh_006 as the child looks at their own kitchen.
+**Voiceover:** One child's voice, in English, gentle, unperformed — as if thinking aloud rather than reading. Delivered across the film, not crowded together. Pacing is generous: words breathe between the places.
 
-> "Oh. It was here too."
+> (enters over sh_002)
+> "There are places on this planet you will never stand in."
+>
+> (over sh_003)
+> "A flood at golden hour."
+>
+> (over sh_004)
+> "A canopy you cannot reach except by wing."
+>
+> (over sh_005 — the fox looks; the VO waits; no words)
+>
+> (over sh_006)
+> "And a kitchen, in a quiet morning, where someone you love is making tea."
+>
+> (over sh_007, just before the cut)
+> "All of it. Here."
 
-**Total spoken words:** 5.
+**Total spoken words:** ~40.
 
-**Sound design principle:** Each location arrives fully — the reef is wet, the delta is wide, the canopy is windy, the ice is silent. The doors themselves have no magical sound. They creak or slide the way real doors do. The magic is that the room on the other side is real.
+**Sound design principle:** Each location arrives fully — the reef is wet, the delta is wide, the canopy is windy, the ice is silent, the kitchen is domestic. Ambient and sfx layers are never ornamental. The orchestra is the emotional thread; the places are the argument; the voice is the thought that connects them.
 
 ---
 
 ## 5. TITLE
 
-**Threshold**
+**Here**
 
 ---
 
@@ -99,4 +114,4 @@ One card, white type on black, held 3 seconds after the final cut (additive to t
 ---
 
 **Execution notes for downstream agents:**
-The film's power depends on restraint. Door transitions must be executed as continuous camera moves through the frame, not cuts with VFX flourishes. Color grading should be warm-neutral, not saturated. Resist the urge to add particle effects, light blooms, or transition sparkles on the doorways — the impossibility is the content; decoration weakens it. The child in sh_006 must not smile. Recognition, not delight.
+The film's power depends on restraint and photography. Each shot is a standalone vignette — no portal effects, no match-cuts across impossible geographies, no particle effects or transition sparkles. Camera moves are the moves drones and steadicams actually make: slow, honest, long. Color grading is warm-neutral, not postcard-saturated. The child in sh_006 must not smile; the register is recognition, not delight. The orchestra must never instruct the viewer how to feel — it sits underneath the images like weather. When in doubt, hold the shot longer.

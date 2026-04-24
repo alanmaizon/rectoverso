@@ -349,21 +349,21 @@ def _build_toolset(args: argparse.Namespace) -> ToolSet:
 
         normalize_fn = _normalize_fn
 
-    # Editor callable — wraps EditorTool over AnthropicManagedAgentsSession.
-    # Artifacts land in artifacts/edit/uploads/<session_id>/ so the existing
-    # clear_edit_artifacts invariant (film_status → pending clears
-    # artifacts/edit/) covers them automatically.
+    # Editor callable — wraps EditorTool. In demo mode (RECTOVERSO_DEMO_MODE=1)
+    # uses MockEditorSession; in production uses AnthropicManagedAgentsSession.
     editor_fn = None
     if not args.no_editor:
-        import anthropic as _anthropic
-        _api_key = None  # default_client() already resolves from env
-        _anthropic_client = _anthropic.Anthropic()
-
-        _session = AnthropicManagedAgentsSession(
-            client=_anthropic_client,
-            storage_root=args.editor_workspace / "uploads",
-        )
-        _editor_tool = EditorTool(session=_session)
+        import os as _os
+        if _os.environ.get("RECTOVERSO_DEMO_MODE") == "1":
+            _editor_tool = EditorTool.from_env(demo_mode=True)
+        else:
+            import anthropic as _anthropic
+            _anthropic_client = _anthropic.Anthropic()
+            _session = AnthropicManagedAgentsSession(
+                client=_anthropic_client,
+                storage_root=args.editor_workspace / "uploads",
+            )
+            _editor_tool = EditorTool(session=_session)
 
         def _editor_fn(
             *,

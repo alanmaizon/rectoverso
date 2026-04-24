@@ -917,7 +917,10 @@ class FilmOrchestrator:
             if shot.get("status") != "approved":
                 return f"shot_{shot.get('shot_id')}_not_approved"
             final = shot.get("final") or {}
-            if not final.get("normalized_path"):
+            # Only gate on normalized_path when normalization is wired. When
+            # tools.normalize is None the phase is intentionally skipped and
+            # the Editor composes from raw render_path directly.
+            if self.tools.normalize is not None and not final.get("normalized_path"):
                 return f"shot_{shot.get('shot_id')}_missing_normalized_path"
             if shot.get("audio_status") == "pending":
                 # Pending = audio phase hasn't run. Every other value is

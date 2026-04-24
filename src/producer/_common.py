@@ -75,6 +75,15 @@ def md5_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def sha256_file(path: Path) -> str:
+    """Streaming sha256 of a file. Used for artifact upload integrity checks."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(64 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def http_error_body(exc: urllib.error.HTTPError) -> str:
     """Read the response body out of an HTTPError, handle decode failures
     gracefully, truncate to 500 chars. Downstream adapters surface this as

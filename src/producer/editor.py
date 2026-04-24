@@ -51,6 +51,7 @@ it into events.db + budget counters).
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -255,6 +256,54 @@ class EditorTool:
     """
 
     name = "editor_agent"
+
+    @classmethod
+    def from_env(
+        cls,
+        *,
+        demo_mode: bool | None = None,
+        fixture_dir: Path | None = None,
+        client: Any | None = None,
+        storage_root: Path | None = None,
+        system_prompt: str | None = None,
+        skills: tuple[str, ...] = DEFAULT_SKILLS,
+        apt_packages: tuple[str, ...] = DEFAULT_APT_PACKAGES,
+        model: str = DEFAULT_MODEL,
+        timeout_s: float = DEFAULT_TIMEOUT_S,
+    ) -> "EditorTool":
+        """Factory that selects MockEditorSession or AnthropicManagedAgentsSession
+        based on RECTOVERSO_DEMO_MODE env var or the explicit demo_mode kwarg.
+        Lazy-imports both implementations to avoid circular imports.
+        """
+        if demo_mode is None:
+            demo_mode = os.environ.get("RECTOVERSO_DEMO_MODE", "0") == "1"
+
+        if demo_mode:
+            from .editor_session_mock import MockEditorSession
+
+            session: EditorSession = MockEditorSession(
+                fixture_dir=fixture_dir or REPO_ROOT / "demo" / "fixtures" / "editor",
+            )
+        else:
+            from .editor_session import AnthropicManagedAgentsSession
+
+            if client is None:
+                raise ValueError(
+                    "EditorTool.from_env: client is required in production mode"
+                )
+            session = AnthropicManagedAgentsSession(
+                client=client,
+                storage_root=storage_root or REPO_ROOT / "artifacts" / "edit" / "uploads",
+            )
+
+        return cls(
+            session=session,
+            system_prompt=system_prompt,
+            skills=skills,
+            apt_packages=apt_packages,
+            model=model,
+            timeout_s=timeout_s,
+        )
 
     def __init__(
         self,

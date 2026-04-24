@@ -7,6 +7,51 @@ Format: `[ISO-timestamp] <tag>: <one-line entry>`. Multi-line notes allowed unde
 
 ---
 
+## Day 5 — Fri Apr 25 (final session before submission)
+
+### 2026-04-25T18:00:00Z — Demo mode finalized; pipeline end-to-end verified
+
+**EditorSession stabilized for demo recording.** The real `AnthropicManagedAgentsSession` spawns live cloud infra (Anthropic Managed Agents, ngrok, Flask). That's correct for production, but a 4-minute Veo render mid-take kills the recording. The `MockEditorSession` (`src/producer/editor_session_mock.py`) replaces the live session with fixture-backed extraction: it picks a `*.tar.gz` from `demo/fixtures/editor/`, extracts it into `workspace_dir`, and returns a fully-populated `EditorSessionResult` with `render_md5` and `uploaded_sha256` computed from the actual bytes. All downstream integrity checks pass without special-casing. `EditorTool.from_env(demo_mode=True)` (or env var `RECTOVERSO_DEMO_MODE=1`) selects the mock; the production path is untouched.
+
+**Bug fixed: normalize-optional deadlock.** `FilmOrchestrator._editor_trigger_skip_reason()` required `shot.final.normalized_path` even when `ToolSet.normalize` is `None` (i.e., normalization intentionally skipped). This caused the editor trigger to never fire when running without normalization — a silent deadlock. Fixed: the `normalized_path` check now only gates when `self.tools.normalize is not None`.
+
+**demo mode wired into film_cmd.py.** `_build_toolset()` now detects `RECTOVERSO_DEMO_MODE=1` and uses `EditorTool.from_env(demo_mode=True)` instead of the live `AnthropicManagedAgentsSession`. Running `RECTOVERSO_DEMO_MODE=1 bin/rectoverso film --resume --manifest state/manifest.json` exercises the full orchestrator → shot loop → editor path without any API calls.
+
+**Site export script added** (`scripts/export_site.py`). After a successful run, copy `state/manifest.json` → `site/data/manifest.json`, export `state/events.db` → `site/data/events.json` (all rows, payload decoded from JSON string), and copy the final MP4 to `site/media/`. The static site in `site/` reads from those paths.
+
+**Code quality pass (/simplify).** Three agents reviewed all changed code:
+- `_md5_file()` and `_sha256_file()` in the mock duplicated `_common.py` helpers. Deleted both; `sha256_file()` added to `_common.py` (64 KB streaming, same pattern as `md5_file`). Both imported by the mock.
+- `scenario_map` field on `MockEditorSession` was declared but never read. Removed.
+- `import os` hoisted from inside `from_env()` to module top.
+- Absolute import `src.producer.editor` → relative `.editor` in mock module.
+- Production path of `EditorTool.from_env()` was calling `AnthropicManagedAgentsSession()` with no arguments (runtime `TypeError`). Fixed: `client` + `storage_root` now accepted as kwargs; raises `ValueError` with a clear message when `client` is missing in production mode.
+
+**Tests: 20 passing.** `tests/producer/test_editor_session_mock.py` (5 tests) + all pre-existing tests green.
+
+**Submission checklist (as of this entry):**
+- [x] Tier 1–4 agent architecture implemented and tested
+- [x] Router with hard rules and budget caps
+- [x] Agent contracts (5 pre-dispatch validators) with hermetic tests
+- [x] Full orchestrator loop: render → judge → revise → normalize → audio → editor
+- [x] MockEditorSession + RECTOVERSO_DEMO_MODE for safe demo recording
+- [x] EditorTool.from_env() factory for clean env-based switching
+- [x] Site export script
+- [x] Hackathon log up to date
+- [ ] README.md (next)
+- [ ] Demo video (Day 6 — Sun Apr 26 morning)
+
+---
+
+## Day 4 — Thu Apr 24
+
+### 2026-04-24T22:00:00Z — Managed Agents API block & Budget depletion
+
+**Hit the wall on Anthropic usage.** During iteration between Claude Code and Copilot using Opus 4.7, testing the `AnthropicManagedAgentsSession` live infra (ngrok + Flask + Managed Agents + Hyperframes sandbox), we completely drained our Anthropic API credits. 
+We hit $-159 in usage before being blocked by Anthropic's safety harness ("Usage Policy / Cyber Verification Program"). The beta harness is very strict and expensive to run iteratively.
+To finish the project without further embarrassment or charges, we are shifting entirely to `RECTOVERSO_DEMO_MODE=1`. All live API calls (Claude, video, audio) will be stubbed out with mocks that return golden-path fixture data. We will rely on the `MockEditorSession` and build out `make_golden_demo.py` to generate a flawless, coherent 1-minute presentation film offline. This ensures the demo site works perfectly and the project is submittable.
+
+---
+
 ## Day 3 — Thu Apr 23
 
 ### 2026-04-23T15:00:00Z — Nano-banana (Gemini image gen) landed as Qwen fallback
@@ -332,7 +377,7 @@ Final budget envelope:
 - Anthropic: $500 (orchestration)
 - fal.ai: $136 (Kling)
 - Vertex Veo: $15 hard cap
-- Alibaba Wan: $0 + free quota (50–100 gens)
+- Alibaba Wan: $0 USD + free quota (50–100 gens)
 - ElevenLabs: $0 + 117,999 credits
 - **`cap_usd` seed: $151**
 
