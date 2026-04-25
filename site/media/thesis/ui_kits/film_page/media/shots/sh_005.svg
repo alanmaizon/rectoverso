@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="ice" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6E8DA6"></stop>
+      <stop offset="1" stop-color="#2E3B4A"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#ice)"></rect>
+  <polygon points="0,640 380,500 700,580 980,460 1280,540 1600,470 1600,900 0,900" fill="#DCE4EC" fill-opacity="0.88"></polygon>
+  <polygon points="0,720 420,660 760,700 1120,620 1600,680 1600,900 0,900" fill="#AEBCC9"></polygon>
+  <text x="40" y="870" font-family="&#39;JetBrains Mono&#39;, monospace" font-size="22" fill="#14120F" fill-opacity="0.72" letter-spacing="0.15em">PLACEHOLDER · SH_005 · GLACIER</text>
+</svg>

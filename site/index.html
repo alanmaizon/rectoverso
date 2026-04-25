@@ -3,1018 +3,84 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Magic Doors — Recto Verso Productions</title>
+<title>Recto Verso Productions — Film Report</title>
 <link rel="stylesheet" href="./styles/tokens.css">
 <link rel="stylesheet" href="./styles/page.css">
 </head>
 <body>
 <div id="root"></div>
-<script type="application/json" id="manifest-data">
-{
-  "manifest_version": "1.0",
-  "project_id": "proj_earth_day_doors_2026",
-  "created_at": "2026-04-22T10:00:00Z",
-  "updated_at": "2026-04-26T15:30:00Z",
-
-  "brief": {
-    "logline": "Magic doors appear in cities worldwide. Each leads somewhere surprising.",
-    "target_duration_s": 60,
-    "tone": ["magical realism", "dreamlike", "grounded"],
-    "genre": "short film",
-    "source_path": "inputs/brief.md",
-    "artistic_style": "golden-hour photography, shallow depth of field, handheld but calm",
-    "allow_artistic_experiments": false
-  },
-
-  "script": {
-    "status": "approved",
-    "version": 2,
-    "path": "artifacts/script/v2.md",
-    "approved_by": "producer",
-    "approved_at": "2026-04-22T11:12:00Z"
-  },
-
-  "shots": [
-    {
-      "shot_id": "sh_001",
-      "scene": 1,
-      "order": 1,
-      "description": "Wide establishing: Shibuya crossing at golden hour, crowds, neon reflections on wet asphalt.",
-      "duration_s": 8.0,
-      "has_humans": true,
-      "is_hero": false,
-      "motion_level": "high",
-      "continuity_refs": [],
-      "prompt": {
-        "authored_by": "prompt_smith",
-        "primary": "Wide cinematic establishing shot of Shibuya crossing at golden hour. Crowds cross the intersection in soft motion blur. Neon signage reflects on wet asphalt. Handheld but calm, 35mm, shallow depth of field. Warm tones, film grain.",
-        "negative": "plastic skin, warped faces, text artifacts",
-        "start_frame_path": "inputs/refs/location/shibuya_goldenhour.jpg"
-      },
-      "routing": {
-        "chosen_provider": "fal_kling_2_1_pro",
-        "chosen_model": "kling-video/v2.1/pro/image-to-video",
-        "rationale": "Human subjects in frame. Motion complexity high. Pro tier selected; Standard deprioritized by rule.",
-        "decided_by": "router",
-        "decided_at": "2026-04-22T11:40:00Z",
-        "alternates": ["alibaba_wan_2_7_plus"]
-      },
-      "attempts": [
-        {
-          "attempt_id": 1,
-          "provider": "fal_kling_2_1_pro",
-          "started_at": "2026-04-22T11:41:00Z",
-          "completed_at": "2026-04-22T11:46:17Z",
-          "cost_usd": 0.72,
-          "latency_s": 317,
-          "render_path": "artifacts/renders/sh_001_a1.mp4",
-          "judge_score": 0.88,
-          "judge_notes": "Establishing scale reads. Crowd motion natural. No face artifacts at this distance.",
-          "outcome": "approved",
-          "approved_by": "shot_judge"
-        }
-      ],
-      "final": {
-        "render_path": "artifacts/renders/sh_001_a1.mp4",
-        "attempt_id": 1
-      },
-      "status": "approved",
-      "history": [
-        {"ts": "2026-04-22T11:12:30Z", "event": "created", "by": "screenwriter"},
-        {"ts": "2026-04-22T11:25:00Z", "event": "prompted", "by": "prompt_smith"},
-        {"ts": "2026-04-22T11:40:00Z", "event": "routed", "by": "router", "detail": "fal_kling_2_1_pro"},
-        {"ts": "2026-04-22T11:41:00Z", "event": "rendering", "by": "renderer"},
-        {"ts": "2026-04-22T11:46:17Z", "event": "judging", "by": "renderer"},
-        {"ts": "2026-04-22T11:46:45Z", "event": "approved", "by": "shot_judge"}
-      ],
-      "judge_feedback": [],
-      "creative_feedback": [],
-      "artistic_direction": "Establish the city as an ordinary place before anything magical happens."
-    },
-
-    {
-      "shot_id": "sh_002",
-      "scene": 1,
-      "order": 2,
-      "description": "A wooden door appears at the crossing, out of place against neon.",
-      "duration_s": 5.0,
-      "has_humans": false,
-      "is_hero": false,
-      "motion_level": "low",
-      "continuity_refs": ["sh_001"],
-      "prompt": {
-        "authored_by": "prompt_smith",
-        "primary": "A plain wooden door stands alone in the middle of Shibuya crossing. The door is still. The world moves around it in slow motion. Warm late-afternoon light rakes across the grain. 35mm film look.",
-        "negative": "ornate carvings, fantasy elements, glow effects",
-        "start_frame_path": "inputs/refs/doors/wooden_door.jpg",
-        "reference_image_paths": ["inputs/refs/location/shibuya_goldenhour.jpg"]
-      },
-      "routing": {
-        "chosen_provider": "alibaba_wan_2_7_plus",
-        "chosen_model": "wan-2.7-plus",
-        "rationale": "No humans. Low motion. Free-quota workhorse selected over paid tiers.",
-        "decided_by": "router",
-        "decided_at": "2026-04-22T12:01:00Z",
-        "alternates": ["fal_kling_2_1_standard"]
-      },
-      "attempts": [
-        {
-          "attempt_id": 1,
-          "provider": "alibaba_wan_2_7_turbo",
-          "started_at": "2026-04-22T12:02:00Z",
-          "completed_at": "2026-04-22T12:03:10Z",
-          "cost_usd": 0.0,
-          "latency_s": 70,
-          "render_path": "artifacts/renders/sh_002_a1.mp4",
-          "judge_score": 0.54,
-          "judge_notes": "Door geometry warps at 3s. Background pedestrians ghost. Turbo-tier fidelity insufficient for final.",
-          "outcome": "rejected",
-          "rejection_reason": "artifact"
-        },
-        {
-          "attempt_id": 2,
-          "provider": "alibaba_wan_2_7_plus",
-          "started_at": "2026-04-22T12:05:00Z",
-          "completed_at": "2026-04-22T12:08:42Z",
-          "cost_usd": 0.0,
-          "latency_s": 222,
-          "render_path": "artifacts/renders/sh_002_a2.mp4",
-          "judge_score": 0.86,
-          "judge_notes": "Door stable. Background pedestrians natural. Good tonal match to sh_001.",
-          "outcome": "approved",
-          "approved_by": "shot_judge"
-        }
-      ],
-      "final": {
-        "render_path": "artifacts/renders/sh_002_a2.mp4",
-        "attempt_id": 2
-      },
-      "status": "approved",
-      "history": [
-        {"ts": "2026-04-22T11:25:00Z", "event": "created", "by": "screenwriter"},
-        {"ts": "2026-04-22T11:48:00Z", "event": "prompted", "by": "prompt_smith"},
-        {"ts": "2026-04-22T12:01:00Z", "event": "routed", "by": "router", "detail": "alibaba_wan_2_7_plus"},
-        {"ts": "2026-04-22T12:02:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 1 via wan turbo"},
-        {"ts": "2026-04-22T12:04:00Z", "event": "rejected", "by": "shot_judge", "detail": "artifact; escalate to plus"},
-        {"ts": "2026-04-22T12:05:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 2 via wan plus"},
-        {"ts": "2026-04-22T12:09:15Z", "event": "approved", "by": "shot_judge"}
-      ],
-      "judge_feedback": [
-        {
-          "ts": "2026-04-22T12:04:00Z",
-          "feedback_type": "artifact",
-          "severity": "critical",
-          "observation": "Door geometry warps at 3s on Wan Turbo attempt 1.",
-          "suggestion": "Escalate to Wan Plus for final render.",
-          "from_agent": "shot_judge"
-        }
-      ],
-      "creative_feedback": [],
-      "artistic_direction": "The door should feel ordinary, not magical. It is just there."
-    },
-
-    {
-      "shot_id": "sh_005",
-      "scene": 2,
-      "order": 5,
-      "description": "Hero shot: the door opens onto a glacier in blue-hour light. The reveal.",
-      "duration_s": 7.0,
-      "has_humans": false,
-      "is_hero": true,
-      "motion_level": "medium",
-      "continuity_refs": ["sh_002"],
-      "prompt": {
-        "authored_by": "prompt_smith",
-        "primary": "Slow dolly toward a wooden door that opens onto a vast glacier under blue-hour sky. Breath of cold air escapes the threshold. Pristine ice, distant mountains, no people. Cinematic anamorphic, natural light.",
-        "negative": "warped geometry, cartoonish ice, snow globe",
-        "start_frame_path": "inputs/refs/locations/glacier.jpg"
-      },
-      "routing": {
-        "chosen_provider": "vertex_veo_3_1_fast",
-        "chosen_model": "veo-3.1-fast",
-        "rationale": "Hero shot, no humans, requires photographic fidelity for reveal moment. Veo selected within hero budget. No humans → EU restriction not triggered.",
-        "decided_by": "router",
-        "decided_at": "2026-04-23T09:14:00Z",
-        "alternates": ["fal_kling_2_1_pro"]
-      },
-      "attempts": [
-        {
-          "attempt_id": 1,
-          "provider": "vertex_veo_3_1_fast",
-          "started_at": "2026-04-23T09:15:00Z",
-          "completed_at": "2026-04-23T09:19:32Z",
-          "cost_usd": 3.20,
-          "latency_s": 272,
-          "render_path": "artifacts/renders/sh_005_a1.mp4",
-          "judge_score": 0.94,
-          "judge_notes": "Hero moment lands. Light transition from interior to glacier reads in-camera. No seams at door threshold.",
-          "outcome": "approved",
-          "approved_by": "shot_judge"
-        }
-      ],
-      "final": {
-        "render_path": "artifacts/renders/sh_005_a1.mp4",
-        "attempt_id": 1
-      },
-      "status": "approved",
-      "history": [
-        {"ts": "2026-04-23T08:40:00Z", "event": "created", "by": "screenwriter"},
-        {"ts": "2026-04-23T09:02:00Z", "event": "prompted", "by": "prompt_smith"},
-        {"ts": "2026-04-23T09:14:00Z", "event": "routed", "by": "router", "detail": "vertex_veo_3_1_fast"},
-        {"ts": "2026-04-23T09:15:00Z", "event": "rendering", "by": "renderer"},
-        {"ts": "2026-04-23T09:19:32Z", "event": "judging", "by": "renderer"},
-        {"ts": "2026-04-23T09:20:05Z", "event": "approved", "by": "shot_judge"}
-      ],
-      "judge_feedback": [],
-      "creative_feedback": [
-        {
-          "ts": "2026-04-23T08:55:00Z",
-          "from_agent": "creative_director",
-          "feedback": "This is the emotional center of the film. Protect the reveal — no cuts in the middle, no dialogue over it.",
-          "suggestion": "Lock duration at 7s and hold VO to post-reveal only.",
-          "priority": "high",
-          "addressed": true,
-          "addressed_by": "producer locked sh_005 duration at 7s and excluded VO overlap",
-          "addressed_at": "2026-04-23T09:00:00Z"
-        }
-      ],
-      "artistic_direction": "Slow. Let the cold air do the work. No music stab."
-    },
-
-    {
-      "shot_id": "sh_007",
-      "scene": 3,
-      "order": 7,
-      "description": "Wide hero: glacier scale, a small human figure at the edge for reference.",
-      "duration_s": 7.0,
-      "has_humans": true,
-      "is_hero": true,
-      "motion_level": "low",
-      "continuity_refs": ["sh_005"],
-      "prompt": {
-        "authored_by": "prompt_smith",
-        "primary": "Wide aerial-adjacent shot of an ice field. A single human figure stands at the glacier edge, coat flapping in wind. Scale of ice dwarfs them. Cold blue light, real horizon, no fantasy.",
-        "negative": "CGI look, desaturated greys, video-game sky",
-        "start_frame_path": "inputs/refs/locations/glacier.jpg",
-        "reference_subject_paths": [
-          "inputs/refs/protagonist/wide.jpg",
-          "inputs/refs/protagonist/coat.jpg"
-        ]
-      },
-      "routing": {
-        "chosen_provider": "fal_kling_2_1_pro",
-        "chosen_model": "kling-video/v2.1/pro/image-to-video",
-        "rationale": "Hero shot BUT has_humans=true. Hard rule humans_never_veo forces Veo off-table. Two subject refs → prefer_kling_pro_when_refs_or_end_frame deprioritizes Standard. Kling Pro selected.",
-        "decided_by": "router",
-        "decided_at": "2026-04-24T13:02:00Z",
-        "alternates": ["fal_kling_2_1_standard"]
-      },
-      "attempts": [
-        {
-          "attempt_id": 1,
-          "provider": "fal_kling_2_1_pro",
-          "started_at": "2026-04-24T13:03:00Z",
-          "completed_at": "2026-04-24T13:07:14Z",
-          "cost_usd": 0.63,
-          "latency_s": 254,
-          "render_path": "artifacts/renders/sh_007_a1.mp4",
-          "judge_score": 0.48,
-          "judge_notes": "Figure floats above ice surface (no contact shadow). Ice texture repeats. Scale unconvincing.",
-          "outcome": "rejected",
-          "rejection_reason": "continuity"
-        },
-        {
-          "attempt_id": 2,
-          "provider": "fal_kling_2_1_pro",
-          "started_at": "2026-04-24T13:10:00Z",
-          "completed_at": "2026-04-24T13:14:41Z",
-          "cost_usd": 0.63,
-          "latency_s": 281,
-          "render_path": "artifacts/renders/sh_007_a2.mp4",
-          "judge_score": 0.61,
-          "judge_notes": "Figure grounded. Ice texture improved. Still reads slightly small-scale. Marginal.",
-          "outcome": "rejected",
-          "rejection_reason": "artifact"
-        }
-      ],
-      "status": "escalated",
-      "history": [
-        {"ts": "2026-04-24T12:40:00Z", "event": "created", "by": "screenwriter"},
-        {"ts": "2026-04-24T12:55:00Z", "event": "prompted", "by": "prompt_smith"},
-        {"ts": "2026-04-24T13:02:00Z", "event": "routed", "by": "router", "detail": "fal_kling_2_1_pro"},
-        {"ts": "2026-04-24T13:03:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 1"},
-        {"ts": "2026-04-24T13:08:00Z", "event": "rejected", "by": "shot_judge", "detail": "no contact shadow"},
-        {"ts": "2026-04-24T13:10:00Z", "event": "rendering", "by": "renderer", "detail": "attempt 2"},
-        {"ts": "2026-04-24T13:15:20Z", "event": "escalated", "by": "producer", "detail": "two rejects; defer crop to editor"}
-      ],
-      "judge_feedback": [
-        {
-          "ts": "2026-04-24T13:08:00Z",
-          "feedback_type": "continuity",
-          "severity": "critical",
-          "observation": "No contact shadow between figure and ice. Figure appears floating.",
-          "suggestion": "Re-render with grounded start frame, or crop wider in edit.",
-          "from_agent": "shot_judge"
-        },
-        {
-          "ts": "2026-04-24T13:15:00Z",
-          "feedback_type": "composition",
-          "severity": "warn",
-          "observation": "Figure grounded but scale reads small rather than epic.",
-          "suggestion": "Tighter framing or re-render with different reference.",
-          "from_agent": "shot_judge"
-        }
-      ],
-      "creative_feedback": [
-        {
-          "ts": "2026-04-24T13:16:00Z",
-          "from_agent": "creative_director",
-          "feedback": "Attempt 2 is marginal, not broken. Budget discipline argues against a third render.",
-          "suggestion": "Accept attempt 2 and let Editor crop wider in post to recover scale.",
-          "priority": "medium",
-          "addressed": true,
-          "addressed_by": "producer accepted attempt 2 as marginal final with editor crop note",
-          "addressed_at": "2026-04-24T13:17:00Z"
-        }
-      ],
-      "artistic_direction": "Scale is the point. Human must read small.",
-      "budget_decision": {
-        "trigger": "Two Kling Pro attempts consumed $1.26 with marginal results.",
-        "original_plan": "Iterate until judge_score > 0.8.",
-        "creative_pivot": "Accept attempt 2 as final; Editor crops wider to amplify scale.",
-        "rationale": "Third attempt low-probability of resolving scale issue; editor-side crop recovers the intent.",
-        "decided_at": "2026-04-24T13:17:00Z",
-        "decided_by": "producer"
-      }
-    }
-  ],
-
-  "audio": {
-    "dialogue": [
-      {
-        "shot_id": "sh_007",
-        "line_id": "vo_01",
-        "text": "Earth. Closer than you think.",
-        "voice_id": "el_voice_21df",
-        "audio_path": "artifacts/audio/vo_01.mp3",
-        "duration_s": 3.2,
-        "timing": { "in_s": 55.8, "out_s": 59.0 },
-        "compressibility_s": 0.2
-      }
-    ],
-    "sfx": [
-      {
-        "shot_id": "sh_005",
-        "sfx_id": "sfx_wind_glacier",
-        "description": "cold wind across ice field",
-        "audio_path": "artifacts/audio/sfx_05.mp3"
-      },
-      {
-        "shot_id": "sh_002",
-        "sfx_id": "sfx_crossing_ambience",
-        "description": "muted Shibuya ambience, distant cars",
-        "audio_path": "artifacts/audio/sfx_02.mp3"
-      }
-    ]
-  },
-
-  "edit": {
-    "renderer": "hyperframes",
-    "renderer_version": "0.4.12",
-    "composition_path": "artifacts/edit/index.html",
-    "composition_archive_path": "artifacts/edit/composition.zip",
-    "render_path": "artifacts/edit/final.mp4",
-    "render_md5": "a0d5625a16271e0274563466ab36ee4e",
-    "total_duration_s": 60.0,
-    "status": "approved"
-  },
-
-  "budget": {
-    "cap_usd": 151.0,
-    "spent_usd": 5.81,
-    "by_provider": {
-      "vertex_veo_3_1_fast": 3.20,
-      "fal_kling_2_1_pro": 2.61,
-      "fal_kling_2_1_standard": 0.0,
-      "alibaba_wan_2_7_plus": 0.0,
-      "alibaba_wan_2_7_turbo": 0.0
-    },
-    "alibaba_quota_remaining": 42,
-    "elevenlabs_credits_remaining": 117423
-  },
-
-  "run_state": {
-    "current_stage": "done",
-    "last_event_id": 30,
-    "resumable": true
-  },
-
-  "creative_decisions": [
-    {
-      "ts": "2026-04-23T08:55:00Z",
-      "decision_type": "duration_adjust",
-      "trigger": "Creative Director identified sh_005 as emotional anchor and urged pacing protection.",
-      "action": "Locked sh_005 duration at 7s; excluded VO overlap.",
-      "affected_shots": ["sh_005"],
-      "rationale": "Protect the reveal — aligns with brief tone 'dreamlike' and the artistic anchor of quiet, deliberate pacing.",
-      "decided_by": "producer",
-      "source_feedback_refs": [{"shot_id": "sh_005", "feedback_index": 0}]
-    },
-    {
-      "ts": "2026-04-24T13:17:00Z",
-      "decision_type": "scope_change",
-      "trigger": "Two Kling Pro attempts on sh_007 produced marginal results; third attempt low probability of success.",
-      "action": "Accepted attempt 2 as marginal final; flagged editor crop to recover scale.",
-      "affected_shots": ["sh_007"],
-      "rationale": "Budget discipline plus editor-side recovery preserves the 'Earth feels vast' intent without burning a third render.",
-      "decided_by": "producer",
-      "source_feedback_refs": [{"shot_id": "sh_007", "feedback_index": 0}]
-    }
-  ]
-}
-
-</script>
-<script type="application/json" id="events-data">
-[
-  {
-    "id": 1,
-    "ts": "2026-04-22T10:00:05.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "producer",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.041,
-    "latency_s": 2.1,
-    "input_tokens": 1820,
-    "output_tokens": 340,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 1500,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 2,
-    "ts": "2026-04-22T10:02:30.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "screenwriter",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.082,
-    "latency_s": 6.4,
-    "input_tokens": 2400,
-    "output_tokens": 1100,
-    "cache_read_tokens": 1500,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 3,
-    "ts": "2026-04-22T11:12:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "producer",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.018,
-    "latency_s": 1.4,
-    "input_tokens": 2800,
-    "output_tokens": 120,
-    "cache_read_tokens": 2600,
-    "cache_creation_tokens": 0,
-    "status": "cache_hit",
-    "error": null
-  },
-  {
-    "id": 4,
-    "ts": "2026-04-22T11:25:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "prompt_smith",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_001",
-    "attempt_id": null,
-    "cost_usd": 0.024,
-    "latency_s": 2.8,
-    "input_tokens": 3100,
-    "output_tokens": 290,
-    "cache_read_tokens": 2800,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 5,
-    "ts": "2026-04-22T11:40:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "router",
-    "provider": null,
-    "model": null,
-    "event_type": "route_decision",
-    "shot_id": "sh_001",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 0.1,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 6,
-    "ts": "2026-04-22T11:41:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "fal",
-    "model": "kling-video/v2.1/pro/image-to-video",
-    "event_type": "render_submit",
-    "shot_id": "sh_001",
-    "attempt_id": 1,
-    "cost_usd": 0.0,
-    "latency_s": 0.8,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 7,
-    "ts": "2026-04-22T11:46:17.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "fal",
-    "model": "kling-video/v2.1/pro/image-to-video",
-    "event_type": "render_poll",
-    "shot_id": "sh_001",
-    "attempt_id": 1,
-    "cost_usd": 0.72,
-    "latency_s": 317.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 8,
-    "ts": "2026-04-22T11:46:45.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_001",
-    "attempt_id": 1,
-    "cost_usd": 0.031,
-    "latency_s": 4.2,
-    "input_tokens": 3400,
-    "output_tokens": 180,
-    "cache_read_tokens": 3200,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 9,
-    "ts": "2026-04-22T11:48:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "prompt_smith",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_002",
-    "attempt_id": null,
-    "cost_usd": 0.019,
-    "latency_s": 2.3,
-    "input_tokens": 3000,
-    "output_tokens": 180,
-    "cache_read_tokens": 2900,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 10,
-    "ts": "2026-04-22T12:01:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "router",
-    "provider": null,
-    "model": null,
-    "event_type": "route_decision",
-    "shot_id": "sh_002",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 0.1,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 11,
-    "ts": "2026-04-22T12:03:10.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "alibaba",
-    "model": "wan-2.7-turbo",
-    "event_type": "render_poll",
-    "shot_id": "sh_002",
-    "attempt_id": 1,
-    "cost_usd": 0.0,
-    "latency_s": 70.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 12,
-    "ts": "2026-04-22T12:04:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_002",
-    "attempt_id": 1,
-    "cost_usd": 0.028,
-    "latency_s": 3.9,
-    "input_tokens": 3500,
-    "output_tokens": 210,
-    "cache_read_tokens": 3300,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 13,
-    "ts": "2026-04-22T12:08:42.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "alibaba",
-    "model": "wan-2.7-plus-14B",
-    "event_type": "render_poll",
-    "shot_id": "sh_002",
-    "attempt_id": 2,
-    "cost_usd": 0.0,
-    "latency_s": 222.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 14,
-    "ts": "2026-04-22T12:09:15.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_002",
-    "attempt_id": 2,
-    "cost_usd": 0.026,
-    "latency_s": 3.7,
-    "input_tokens": 3500,
-    "output_tokens": 170,
-    "cache_read_tokens": 3400,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 15,
-    "ts": "2026-04-23T08:55:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "creative_director",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.098,
-    "latency_s": 7.8,
-    "input_tokens": 5200,
-    "output_tokens": 620,
-    "cache_read_tokens": 4800,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 16,
-    "ts": "2026-04-23T09:02:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "prompt_smith",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_005",
-    "attempt_id": null,
-    "cost_usd": 0.022,
-    "latency_s": 2.6,
-    "input_tokens": 3200,
-    "output_tokens": 210,
-    "cache_read_tokens": 3100,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 17,
-    "ts": "2026-04-23T09:14:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "router",
-    "provider": null,
-    "model": null,
-    "event_type": "route_decision",
-    "shot_id": "sh_005",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 0.1,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 18,
-    "ts": "2026-04-23T09:19:32.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "vertex",
-    "model": "veo-3.1-fast",
-    "event_type": "render_poll",
-    "shot_id": "sh_005",
-    "attempt_id": 1,
-    "cost_usd": 3.20,
-    "latency_s": 272.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 19,
-    "ts": "2026-04-23T09:20:05.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_005",
-    "attempt_id": 1,
-    "cost_usd": 0.033,
-    "latency_s": 4.5,
-    "input_tokens": 3700,
-    "output_tokens": 220,
-    "cache_read_tokens": 3500,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 20,
-    "ts": "2026-04-24T13:02:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "router",
-    "provider": null,
-    "model": null,
-    "event_type": "route_decision",
-    "shot_id": "sh_007",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 0.2,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 21,
-    "ts": "2026-04-24T13:07:14.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "fal",
-    "model": "kling-video/v2.1/pro/image-to-video",
-    "event_type": "render_poll",
-    "shot_id": "sh_007",
-    "attempt_id": 1,
-    "cost_usd": 0.63,
-    "latency_s": 254.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 22,
-    "ts": "2026-04-24T13:08:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_007",
-    "attempt_id": 1,
-    "cost_usd": 0.029,
-    "latency_s": 3.8,
-    "input_tokens": 3600,
-    "output_tokens": 200,
-    "cache_read_tokens": 3400,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 23,
-    "ts": "2026-04-24T13:14:41.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "renderer",
-    "provider": "fal",
-    "model": "kling-video/v2.1/pro/image-to-video",
-    "event_type": "render_poll",
-    "shot_id": "sh_007",
-    "attempt_id": 2,
-    "cost_usd": 0.63,
-    "latency_s": 281.0,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 24,
-    "ts": "2026-04-24T13:15:20.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "shot_judge",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_007",
-    "attempt_id": 2,
-    "cost_usd": 0.031,
-    "latency_s": 4.0,
-    "input_tokens": 3600,
-    "output_tokens": 210,
-    "cache_read_tokens": 3500,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 25,
-    "ts": "2026-04-24T13:16:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "creative_director",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_007",
-    "attempt_id": 2,
-    "cost_usd": 0.084,
-    "latency_s": 6.9,
-    "input_tokens": 5400,
-    "output_tokens": 480,
-    "cache_read_tokens": 5000,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 26,
-    "ts": "2026-04-24T13:17:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "producer",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": "sh_007",
-    "attempt_id": null,
-    "cost_usd": 0.045,
-    "latency_s": 3.2,
-    "input_tokens": 4100,
-    "output_tokens": 260,
-    "cache_read_tokens": 3900,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 27,
-    "ts": "2026-04-25T10:30:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "audio_agent",
-    "provider": "elevenlabs",
-    "model": "eleven_multilingual_v2",
-    "event_type": "tts_call",
-    "shot_id": "sh_008",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 2.1,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 28,
-    "ts": "2026-04-25T10:31:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "audio_agent",
-    "provider": "elevenlabs",
-    "model": "eleven_multilingual_v2",
-    "event_type": "sfx_call",
-    "shot_id": "sh_005",
-    "attempt_id": null,
-    "cost_usd": 0.0,
-    "latency_s": 1.8,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "cache_read_tokens": 0,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 29,
-    "ts": "2026-04-26T15:00:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "creative_director",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "llm_call",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.142,
-    "latency_s": 11.2,
-    "input_tokens": 7800,
-    "output_tokens": 920,
-    "cache_read_tokens": 7000,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  },
-  {
-    "id": 30,
-    "ts": "2026-04-26T15:20:00.000Z",
-    "run_id": "run_20260422_0001",
-    "agent": "editor_agent",
-    "provider": "anthropic",
-    "model": "claude-opus-4-7",
-    "event_type": "assembly",
-    "shot_id": null,
-    "attempt_id": null,
-    "cost_usd": 0.071,
-    "latency_s": 8.4,
-    "input_tokens": 6200,
-    "output_tokens": 520,
-    "cache_read_tokens": 5800,
-    "cache_creation_tokens": 0,
-    "status": "ok",
-    "error": null
-  }
-]
-
-</script>
+<!-- Runtime data is loaded from ./data/manifest.json and ./data/events.json -->
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script type="text/babel" data-presets="env,react">
 /* global React */
 const { useMemo, useState, useEffect } = React;
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function deriveFilmTitle(manifest) {
+  return manifest?.brief?.title || manifest?.project_id || "Untitled Film";
+}
+
+function deriveLogline(manifest) {
+  return manifest?.brief?.logline || manifest?.script?.summary || manifest?.brief?.artistic_style || "No logline provided yet.";
+}
+
+function deriveReleaseDate(manifest, events) {
+  const dates = [manifest?.created_at, manifest?.updated_at, ...asArray(events).map((e) => e.ts)].filter(Boolean);
+  if (dates.length === 0) return "not finalized";
+  const latest = dates.sort().slice(-1)[0];
+  const d = new Date(latest);
+  if (Number.isNaN(d.getTime())) return "not finalized";
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function inferSceneLabel(shot, index) {
+  if (shot.scene !== undefined && shot.scene !== null) return `scene ${shot.scene}`;
+  return `scene ${index + 1}`;
+}
+
+function normalizeEvent(raw, idx) {
+  const id = raw.id ?? raw.event_id ?? idx + 1;
+  const eventType = raw.event_type || raw.kind || "event";
+  return {
+    id,
+    ts: raw.ts || "",
+    run_id: raw.run_id || null,
+    agent: raw.agent || "system",
+    provider: raw.provider || null,
+    model: raw.model || null,
+    event_type: eventType,
+    shot_id: raw.shot_id || null,
+    attempt_id: raw.attempt_id || null,
+    cost_usd: Number(raw.cost_usd || 0),
+    latency_s: Number(raw.latency_s || 0),
+    input_tokens: Number(raw.input_tokens || 0),
+    output_tokens: Number(raw.output_tokens || 0),
+    cache_read_tokens: Number(raw.cache_read_tokens || 0),
+    cache_creation_tokens: Number(raw.cache_creation_tokens || 0),
+    status: raw.status || "ok",
+    error: raw.error || null,
+    payload: raw.payload || null,
+  };
+}
+
+function inferDataStatus(manifest, events) {
+  const project = String(manifest?.project_id || "").toLowerCase();
+  const md5 = String(manifest?.edit?.render_md5 || "").toLowerCase();
+  const hasDemoMarkers = /demo|mock/.test(project) || /demo|mock/.test(md5);
+  const sparseEvents = asArray(events).length <= 1;
+  if (hasDemoMarkers || sparseEvents) return "mock";
+  return "live";
+}
+
+function firstExistingPath(paths, fallback) {
+  const candidate = asArray(paths).find(Boolean);
+  return candidate || fallback;
+}
 
 /* --- Masthead -------------------------------------------------------- */
 function Masthead() {
@@ -1055,27 +121,79 @@ function Icon({ name, size = 16 }) {
   );
 }
 
+/* --- Disclosure ------------------------------------------------------- */
+function DataDisclosure({ status, projectId }) {
+  const isMock = status === "mock";
+  const text = isMock
+    ? "This page is showing a demo/mock snapshot. Scenes, costs, and timing are placeholders until the final submission run lands."
+    : "This page is reading current manifest and event exports from site/data. Values reflect the latest recorded run.";
+  return (
+    <section className="section" id="disclosure">
+      <p className="section__eyebrow">dataset status</p>
+      <h2 className="section__title">Transparency note.</h2>
+      <div className="brief__body">
+        <p>{text}</p>
+        <p style={{ color: "var(--fg-2)" }}>project id: {projectId || "unknown"}</p>
+      </div>
+    </section>
+  );
+}
+
 /* --- Hero ------------------------------------------------------------ */
-function Hero({ brief, edit, project }) {
-  const mins = Math.floor(edit.total_duration_s / 60);
-  const secs = (edit.total_duration_s % 60).toString().padStart(2, "0");
+function Hero({ manifest, events }) {
+  const brief = manifest.brief || {};
+  const edit = manifest.edit || {};
+  const mins = Math.floor((edit.total_duration_s || brief.target_duration_s || 0) / 60);
+  const secs = ((edit.total_duration_s || brief.target_duration_s || 0) % 60).toString().padStart(2, "0");
+  const [videoFailed, setVideoFailed] = useState(false);
+  const heroPoster = firstExistingPath(["./media/sh_005_v1.png", "./media/sh_001_v1.png"], "./media/sh_001_v1.png");
+  const renderFilename = edit.render_path ? edit.render_path.split('/').pop() : null;
+  const initialFilmSrc = renderFilename ? `./media/${renderFilename}` : "./media/demo.mp4";
+  const [filmSrc, setFilmSrc] = useState(initialFilmSrc);
+
+  const handleVideoError = () => {
+    if (filmSrc !== "./media/demo.mp4") {
+      setFilmSrc("./media/demo.mp4");
+    } else {
+      setVideoFailed(true);
+    }
+  };
+  const filmTitle = deriveFilmTitle(manifest);
+  const logline = deriveLogline(manifest);
+  const released = deriveReleaseDate(manifest, events);
+
   return (
     <section className="hero">
       <div>
-        <div className="hero__frame" role="button" aria-label="Play film">
-          <img src="./media/shots/sh_005.svg" alt="Final film poster — the door opens onto a glacier" />
-          <div className="hero__play"><Icon name="play" size={56} /></div>
+        <div className="hero__frame" aria-label="Hero animation preview">
+          {!videoFailed ? (
+            <video
+              key={filmSrc}
+              className="hero__video"
+              src={filmSrc}
+              poster={heroPoster}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="auto"
+              onError={handleVideoError}
+            />
+          ) : (
+            <img src={heroPoster} alt="Final film poster" />
+          )}
         </div>
-        <h1 className="hero__title">Magic Doors</h1>
-        <p className="hero__logline">{brief.logline}</p>
+        <h1 className="hero__title">{filmTitle}</h1>
+        <p className="hero__logline">{logline}</p>
       </div>
       <aside className="hero__rail">
         <dl>
           <dt>duration</dt><dd>{mins}:{secs}</dd>
           <dt>aspect</dt><dd>16:9 · 1080p</dd>
-          <dt>released</dt><dd>22 April 2026</dd>
+          <dt>released</dt><dd>{released}</dd>
           <dt>director</dt><dd>rectoverso (pipeline)</dd>
-          <dt>project</dt><dd>{project}</dd>
+          <dt>project</dt><dd>{manifest.project_id || "unknown"}</dd>
           {edit.renderer_version && (<><dt>renderer</dt><dd>hyperframes {edit.renderer_version}</dd></>)}
         </dl>
         {edit.render_md5 && (
@@ -1095,20 +213,21 @@ function Hero({ brief, edit, project }) {
 
 /* --- Brief ----------------------------------------------------------- */
 function Brief({ brief }) {
+  const toneText = asArray(brief.tone).length > 0 ? asArray(brief.tone).join(" · ") : "not specified";
+  const genreText = brief.genre || "not specified";
+  const lead = brief.logline || brief.artistic_style || "Brief text has not been synced yet.";
   return (
     <section className="section brief" id="brief">
       <p className="section__eyebrow">§ 01 — the brief</p>
       <h2 className="section__title">The creative input.</h2>
       <div className="brief__body">
-        <p>{brief.logline}</p>
+        <p>{lead}</p>
         <p style={{color:"var(--fg-2)"}}>
-          A short film in the register of magical realism — dreamlike but grounded.
-          Golden-hour photography, shallow depth of field, handheld but calm.
-          Sixty seconds; one idea; no third act twist.
+          {brief.artistic_style || "Artistic style is not specified in this export yet."}
         </p>
       </div>
       <div className="brief__tone">
-        tone · {brief.tone.join(" · ")} &nbsp;/&nbsp; genre · {brief.genre}
+        tone · {toneText} &nbsp;/&nbsp; genre · {genreText}
       </div>
     </section>
   );
@@ -1124,7 +243,7 @@ function Script({ shots }) {
         {shots.map((s, i) => (
           <li key={s.shot_id} className="script__row">
             <span className="script__num">{String(i + 1).padStart(2, "0")}</span>
-            <span className="script__scene">scene {s.scene}</span>
+            <span className="script__scene">{inferSceneLabel(s, i)}</span>
             <span className="script__desc">{s.description}</span>
             <span className="script__dur">{s.duration_s.toFixed(1)}s</span>
           </li>
@@ -1148,6 +267,27 @@ function statusDotColor(status) {
   }[status] || "#6A6354";
 }
 
+function ribbonRefSrc(shot) {
+  const prompt = shot.prompt || {};
+  const candidates = [
+    prompt.start_frame_path,
+    ...(prompt.reference_subject_paths || []),
+    ...(prompt.reference_image_paths || []),
+  ].filter(Boolean);
+  const shotFallback = `./media/${shot.shot_id}_v1.png`;
+  if (candidates.length === 0) {
+    return shotFallback;
+  }
+  const selected = String(candidates[0]);
+  if (selected.startsWith("inputs/refs/")) {
+    return shotFallback;
+  }
+  if (selected.startsWith("inputs/")) {
+    return `../${selected}`;
+  }
+  return `./${selected}`;
+}
+
 function ShotStrip({ shots, activeId, onSelect }) {
   return (
     <section className="section" id="strip">
@@ -1159,7 +299,10 @@ function ShotStrip({ shots, activeId, onSelect }) {
         under this frame. Colour lives here, inside the frames.
       </p>
       <div className="strip" role="listbox">
-        {shots.map(s => (
+        {shots.map(s => {
+          const fallbackPoster = `./media/${s.shot_id}_v1.png`;
+          const ribbonSrc = ribbonRefSrc(s);
+          return (
           <button
             key={s.shot_id}
             role="option"
@@ -1171,12 +314,16 @@ function ShotStrip({ shots, activeId, onSelect }) {
               {s.shot_id === activeId ? (
                 <video
                   className="strip__video"
-                  src={`./media/shots/${s.shot_id}.mp4`}
-                  poster={`./media/shots/${s.shot_id}.svg`}
+                  src={`./media/${s.shot_id}.mp4`}
+                  poster={ribbonSrc || fallbackPoster}
                   autoPlay muted loop playsInline preload="metadata"
                 />
               ) : (
-                <img src={`./media/shots/${s.shot_id}.svg`} alt="" />
+                <img
+                  src={ribbonSrc}
+                  alt=""
+                  onError={(ev) => { ev.currentTarget.src = fallbackPoster; }}
+                />
               )}
               {s.shot_id === activeId && <span className="strip__playing">playing</span>}
             </div>
@@ -1186,7 +333,7 @@ function ShotStrip({ shots, activeId, onSelect }) {
             </div>
             <div className="strip__title">{s.description}</div>
           </button>
-        ))}
+        )})}
       </div>
     </section>
   );
@@ -1194,33 +341,33 @@ function ShotStrip({ shots, activeId, onSelect }) {
 
 function ShotDrawer({ shot, audio }) {
   if (!shot) return null;
-  const chosen = shot.routing;
+  const chosen = shot.routing || {};
   const final = shot.final;
-  const dialogue = (audio && audio.dialogue || []).filter(d => d.shot_id === shot.shot_id);
-  const sfx = (audio && audio.sfx || []).filter(s => s.shot_id === shot.shot_id);
+  const dialogue = asArray(audio && audio.dialogue).filter(d => d.shot_id === shot.shot_id || d?.timing?.shot_id === shot.shot_id);
+  const sfx = asArray(audio && audio.sfx).filter(s => s.shot_id === shot.shot_id || s?.timing?.shot_id === shot.shot_id);
   return (
     <div className="section" style={{paddingTop:0}}>
       <div className="drawer" key={shot.shot_id}>
         <div>
-          <p className="drawer__eyebrow">shot {shot.shot_id.replace("sh_","")} · scene {shot.scene} · {shot.duration_s.toFixed(1)}s</p>
+          <p className="drawer__eyebrow">shot {shot.shot_id.replace("sh_","")} · {typeof shot.scene === "number" ? `scene ${shot.scene} · ` : ""}{shot.duration_s.toFixed(1)}s</p>
           <h3 className="drawer__title">{shot.description}</h3>
-          <blockquote className="drawer__prompt">"{shot.prompt.primary}"</blockquote>
+          <blockquote className="drawer__prompt">"{shot?.prompt?.primary || "Prompt not recorded."}"</blockquote>
           {shot.artistic_direction && (
             <p className="drawer__dir"><em>Direction.</em> {shot.artistic_direction}</p>
           )}
 
           <dl className="drawer__kv">
-            <dt>provider</dt><dd>{chosen.chosen_provider}</dd>
-            <dt>model</dt><dd>{chosen.chosen_model}</dd>
-            <dt>rationale</dt><dd style={{fontFamily:"var(--f-serif)",fontSize:13,color:"var(--fg-2)",lineHeight:1.4}}>{chosen.rationale}</dd>
+            <dt>provider</dt><dd>{chosen.chosen_provider || "unknown"}</dd>
+            <dt>model</dt><dd>{chosen.chosen_model || "unknown"}</dd>
+            <dt>rationale</dt><dd style={{fontFamily:"var(--f-serif)",fontSize:13,color:"var(--fg-2)",lineHeight:1.4}}>{chosen.rationale || chosen.reasoning || "No router rationale recorded."}</dd>
             <dt>alternates</dt><dd>{(chosen.alternates||[]).join(", ") || "—"}</dd>
           </dl>
         </div>
 
         <div>
-          <p className="drawer__eyebrow">attempts · {shot.attempts.length}</p>
+          <p className="drawer__eyebrow">attempts · {asArray(shot.attempts).length}</p>
           <div className="drawer__attempts">
-            {shot.attempts.map(a => (
+            {asArray(shot.attempts).map(a => (
               <div key={a.attempt_id} className="attempt">
                 <span className="attempt__num">#{a.attempt_id}</span>
                 <div className="attempt__body">
@@ -1231,11 +378,18 @@ function ShotDrawer({ shot, audio }) {
                 <span className="attempt__cost">${a.cost_usd.toFixed(2)} · {a.latency_s}s</span>
               </div>
             ))}
+            {asArray(shot.attempts).length === 0 && (
+              <div className="attempt">
+                <span className="attempt__num">#—</span>
+                <div className="attempt__body">No attempts recorded yet.</div>
+                <span className="attempt__cost">—</span>
+              </div>
+            )}
           </div>
 
           {final && (
             <dl className="drawer__kv" style={{marginTop:"var(--sp-3)"}}>
-              <dt>final</dt><dd>{final.render_path.split("/").pop()} · attempt #{final.attempt_id}</dd>
+              <dt>final</dt><dd>{(final.render_path || "").split("/").pop() || "unknown"}{final.attempt_id ? ` · attempt #${final.attempt_id}` : ""}</dd>
               <dt>status</dt><dd>
                 <span className="dot" style={{background: statusDotColor(shot.status)}} />
                 {shot.status}
@@ -1258,8 +412,14 @@ function ShotDrawer({ shot, audio }) {
                 <figure key={d.line_id} className="part part--dialogue">
                   <figcaption className="part__caption">
                     <span className="part__kind">dialogue</span>
-                    <span className="part__id">{d.line_id}</span>
-                    <span className="part__timing">{d.timing.in_s.toFixed(1)}s → {d.timing.out_s.toFixed(1)}s</span>
+                    <span className="part__id">{d.line_id || d.voice_id || "line"}</span>
+                    <span className="part__timing">
+                      {typeof d?.timing?.in_s === "number" && typeof d?.timing?.out_s === "number"
+                        ? `${d.timing.in_s.toFixed(1)}s -> ${d.timing.out_s.toFixed(1)}s`
+                        : typeof d?.timing?.offset_s === "number"
+                          ? `offset ${d.timing.offset_s.toFixed(1)}s`
+                          : "timing n/a"}
+                    </span>
                   </figcaption>
                   <blockquote className="part__text">"{d.text}"</blockquote>
                   <audio className="part__audio" controls preload="metadata" src={`./${d.audio_path}`} />
@@ -1311,7 +471,7 @@ function AgentTrace({ events, shots }) {
       <div>
         {pageRows.map(e => (
           <div key={e.id} className="trace__row">
-            <span className="trace__ts">{e.ts.slice(5,10)} · {e.ts.slice(11,19)}</span>
+            <span className="trace__ts">{e.ts ? `${e.ts.slice(5,10)} · ${e.ts.slice(11,19)}` : "—"}</span>
             <span className="trace__agent">
               <span className="dot" style={{background: statusDotColor(e.status==="ok" ? "approved" : "pending")}} />
               {e.agent}
@@ -1346,7 +506,7 @@ function traceDetail(e, shots) {
 }
 
 /* --- Ledger ---------------------------------------------------------- */
-function Ledger({ events, budget }) {
+function Ledger({ events, budget, shots }) {
   const byProvider = useMemo(() => {
     const agg = {};
     events.forEach(e => {
@@ -1356,12 +516,31 @@ function Ledger({ events, budget }) {
       agg[p].usd += e.cost_usd || 0;
       agg[p].latency += e.latency_s || 0;
     });
-    return Object.entries(agg).map(([p, v]) => ({ provider: p, ...v }));
-  }, [events]);
+    const eventRows = Object.entries(agg).map(([p, v]) => ({ provider: p, ...v }));
+    const eventUsd = eventRows.reduce((sum, row) => sum + row.usd, 0);
+    if (eventRows.length > 0 && eventUsd > 0) {
+      return { rows: eventRows, source: "events" };
+    }
 
-  const totalUsd = byProvider.reduce((s, r) => s + r.usd, 0);
-  const totalLat = byProvider.reduce((s, r) => s + r.latency, 0);
-  const totalCalls = byProvider.reduce((s, r) => s + r.calls, 0);
+    const shotAgg = {};
+    asArray(shots).forEach((shot) => {
+      asArray(shot.attempts).forEach((attempt) => {
+        const p = attempt.provider || "unknown";
+        if (!shotAgg[p]) shotAgg[p] = { calls: 0, usd: 0, latency: 0 };
+        shotAgg[p].calls += 1;
+        shotAgg[p].usd += Number(attempt.cost_usd || 0);
+        shotAgg[p].latency += Number(attempt.latency_s || 0);
+      });
+    });
+    return {
+      rows: Object.entries(shotAgg).map(([p, v]) => ({ provider: p, ...v })),
+      source: "attempts",
+    };
+  }, [events, shots]);
+
+  const totalUsd = byProvider.rows.reduce((s, r) => s + r.usd, 0);
+  const totalLat = byProvider.rows.reduce((s, r) => s + r.latency, 0);
+  const totalCalls = byProvider.rows.reduce((s, r) => s + r.calls, 0);
 
   return (
     <section className="section" id="ledger">
@@ -1372,7 +551,7 @@ function Ledger({ events, budget }) {
           <tr><th>provider</th><th>calls</th><th className="n">usd</th><th className="n">latency</th></tr>
         </thead>
         <tbody>
-          {byProvider.map(r => (
+          {byProvider.rows.map(r => (
             <tr key={r.provider}>
               <td>{r.provider}</td>
               <td>{r.calls}</td>
@@ -1394,17 +573,20 @@ function Ledger({ events, budget }) {
       <div style={{marginTop:"var(--sp-4)", display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"var(--gutter)", fontFamily:"var(--f-mono)", fontSize:12}}>
         <div>
           <div style={{color:"var(--fg-3)", fontSize:10, letterSpacing:".14em", textTransform:"uppercase", marginBottom:4}}>cap</div>
-          <div style={{fontSize:14}}>${budget.cap_usd.toFixed(2)} · spent ${budget.spent_usd.toFixed(2)}</div>
+          <div style={{fontSize:14}}>${Number(budget.cap_usd || 0).toFixed(2)} · spent ${Number(budget.spent_usd || 0).toFixed(2)}</div>
         </div>
         <div>
           <div style={{color:"var(--fg-3)", fontSize:10, letterSpacing:".14em", textTransform:"uppercase", marginBottom:4}}>alibaba quota</div>
-          <div style={{fontSize:14}}>{budget.alibaba_quota_remaining} calls remaining</div>
+          <div style={{fontSize:14}}>{budget.alibaba_quota_remaining ?? "n/a"} calls remaining</div>
         </div>
         <div>
           <div style={{color:"var(--fg-3)", fontSize:10, letterSpacing:".14em", textTransform:"uppercase", marginBottom:4}}>elevenlabs</div>
-          <div style={{fontSize:14}}>{budget.elevenlabs_credits_remaining.toLocaleString()} credits</div>
+          <div style={{fontSize:14}}>{budget.elevenlabs_credits_remaining ? Number(budget.elevenlabs_credits_remaining).toLocaleString() : "n/a"} credits</div>
         </div>
       </div>
+      <p style={{ marginTop: "var(--sp-3)", color: "var(--fg-2)", fontSize: 12 }}>
+        cost source: {byProvider.source === "events" ? "event log" : "shot attempts fallback (event log incomplete)"}
+      </p>
     </section>
   );
 }
@@ -1420,14 +602,11 @@ function Colophon() {
           This film was produced by <em>rectoverso</em>, a multi-agent pipeline orchestrated by
           Anthropic&apos;s Claude Opus 4.7. A Producer agent coordinated specialists — a Screenwriter,
           a Prompt Smith, a Router, a Renderer, a Shot Judge, an Audio Agent, an Editor Agent, and a
-          Creative Director — through a shared shot manifest. No human touched the frames; a human
-          wrote the brief and downloaded the composition.
+          Creative Director — through a shared shot manifest. A human wrote the brief and reviewed outputs.
         </p>
         <p style={{color:"var(--fg-2)"}}>
-          Shot renders by Kling 2.1 Pro (human shots), Alibaba Wan 2.7 Plus (workhorse), Google Veo 3.1 Fast
-          (one hero moment). Voice and SFX by ElevenLabs. Final edit assembled as a Hyperframes HTML
-          composition, rendered deterministically to MP4 via headless Chrome — the same composition
-          + assets produce the same bytes on every run.
+          Provider mix, cost totals, and timing are read from exported run data on this page.
+          If the dataset is marked as demo/mock, those numbers are placeholders and not final submission receipts.
         </p>
       </div>
       <div className="colophon__credits">
@@ -1440,6 +619,7 @@ function Colophon() {
 
 /* --- App ------------------------------------------------------------- */
 function App({ manifest, events }) {
+  const dataStatus = inferDataStatus(manifest, events);
   const [activeId, setActiveId] = useState(null);
   const activeShot = activeId ? manifest.shots.find(s => s.shot_id === activeId) : null;
 
@@ -1490,25 +670,71 @@ function App({ manifest, events }) {
   return (
     <div className="page">
       <Masthead />
-      <Hero brief={manifest.brief} edit={manifest.edit} project={manifest.project_id} />
+      <Hero manifest={manifest} events={events} />
+      <DataDisclosure status={dataStatus} projectId={manifest.project_id} />
       <Brief brief={manifest.brief} />
       <Script shots={manifest.shots} />
       <ShotStrip shots={manifest.shots} activeId={activeId} onSelect={id => setActiveId(id === activeId ? null : id)} />
       {activeShot && <ShotDrawer shot={activeShot} audio={manifest.audio} />}
       <AgentTrace events={events} shots={manifest.shots} />
-      <Ledger events={events} budget={manifest.budget} />
+      <Ledger events={events} budget={manifest.budget} shots={manifest.shots} />
       <Colophon />
     </div>
   );
 }
 
 /* --- Bootstrap ------------------------------------------------------- */
-(function boot() {
-  const m = JSON.parse(document.getElementById("manifest-data").textContent);
-  const e = JSON.parse(document.getElementById("events-data").textContent);
-  ReactDOM.createRoot(document.getElementById("root")).render(
-    <App manifest={m} events={e} />
-  );
+async function loadJson(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load ${path} (${response.status})`);
+  }
+  return response.json();
+}
+
+(async function boot() {
+  try {
+    const [manifestRaw, eventsRaw] = await Promise.all([
+      loadJson("./data/manifest.json"),
+      loadJson("./data/events.json"),
+    ]);
+    const manifest = {
+      ...manifestRaw,
+      shots: asArray(manifestRaw.shots),
+      brief: manifestRaw.brief || {},
+      edit: manifestRaw.edit || {},
+      audio: manifestRaw.audio || {},
+      budget: manifestRaw.budget || {},
+    };
+    const events = asArray(eventsRaw).map(normalizeEvent);
+    ReactDOM.createRoot(document.getElementById("root")).render(
+      <App manifest={manifest} events={events} />
+    );
+  } catch (err) {
+    ReactDOM.createRoot(document.getElementById("root")).render(
+      <main className="section">
+        <p className="section__eyebrow">data error</p>
+        <h1 className="section__title">Unable to load film data.</h1>
+        <p>{String(err && err.message ? err.message : err)}</p>
+        <p style={{ color: "var(--fg-2)" }}>
+          Expected files: ./data/manifest.json and ./data/events.json
+        </p>
+        {window.location.protocol === 'file:' && (
+          <div style={{ marginTop: "var(--sp-4)", padding: "var(--sp-4)", background: "var(--ink)", border: "1px solid var(--rule-ink)" }}>
+            <p style={{ color: "var(--accent)" }}><strong>Local Viewing Blocked by Browser</strong></p>
+            <p style={{ marginTop: "8px", fontSize: "14px", lineHeight: "1.5" }}>
+              Browsers block loading external JSON files when opening HTML directly from your hard drive (<code>file://</code>). 
+              To view this site locally with the fetched data, start a simple web server in your terminal:
+            </p>
+            <pre style={{ marginTop: "12px", padding: "12px", background: "var(--bg-1)", border: "1px solid var(--rule-ink)", overflowX: "auto", fontFamily: "var(--f-mono)", fontSize: "12px" }}>
+              <code>python3 -m http.server 8000 --directory site</code>
+            </pre>
+            <p style={{ marginTop: "12px", fontSize: "14px" }}>Then open <a href="http://localhost:8000" style={{ color: "inherit", textDecoration: "underline" }}>http://localhost:8000</a></p>
+          </div>
+        )}
+      </main>
+    );
+  }
 })();
 
 </script>

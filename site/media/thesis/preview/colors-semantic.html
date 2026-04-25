@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Semantic status</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin:0; padding:24px; }
+  .row { display:grid; grid-template-columns: 20px 140px 120px 1fr; align-items:center; gap:16px; padding:10px 0; border-top:1px solid var(--fg-rule); }
+  .row:first-child { border-top:0; }
+  .dot { width:10px; height:10px; border-radius:50%; }
+  .n { font-family: var(--f-mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+  .v { font-family: var(--f-mono); font-size:12px; color:var(--fg-2); }
+  .e { font-family: var(--f-serif); font-style:italic; color:var(--fg-2); font-size:14px; }
+</style></head><body>
+  <div class="row"><span class="dot" style="background:#4A6B3A"></span><span class="n">approved</span><span class="v">#4A6B3A</span><span class="e">"Hero moment lands."</span></div>
+  <div class="row"><span class="dot" style="background:#8A3A2A"></span><span class="n">rejected</span><span class="v">#8A3A2A</span><span class="e">"Door geometry warps at 3s."</span></div>
+  <div class="row"><span class="dot" style="background:#9A6A24"></span><span class="n">escalated</span><span class="v">#9A6A24</span><span class="e">"Two rejects — defer to editor."</span></div>
+  <div class="row"><span class="dot" style="background:#6A6354"></span><span class="n">pending</span><span class="v">#6A6354</span><span class="e">"Routed; awaiting render."</span></div>
+</body></html>

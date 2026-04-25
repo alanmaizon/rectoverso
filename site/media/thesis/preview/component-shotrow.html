@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Shot row</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+body{margin:0;padding:18px 24px}
+.row{display:grid;grid-template-columns:160px 1fr 180px;gap:24px;padding:14px 0;border-top:1px solid var(--fg-rule);align-items:start}
+.thumb{aspect-ratio:16/9;background:#1C1A17;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.meta{font-family:var(--f-mono);font-size:11px;color:var(--fg-2);letter-spacing:.06em;text-transform:uppercase}
+.title{font-family:var(--f-serif);font-size:20px;line-height:1.25;margin:4px 0 6px 0}
+.desc{font-family:var(--f-serif);font-size:14px;color:var(--fg-2);margin:0}
+.rail{font-family:var(--f-mono);font-size:12px;text-align:right}
+.rail .k{color:var(--fg-3);letter-spacing:.06em;text-transform:uppercase;font-size:10px;margin-bottom:2px}
+.rail div+div{margin-top:8px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+</style></head><body>
+  <div class="row">
+    <div class="thumb"><img src="../assets/frames/sh_005_placeholder.svg" alt=""></div>
+    <div>
+      <div class="meta">shot 05 · scene 2 · 00:07</div>
+      <h3 class="title">The door opens onto a glacier.</h3>
+      <p class="desc">Slow dolly toward a wooden door that opens onto a vast glacier under blue-hour sky.</p>
+    </div>
+    <div class="rail">
+      <div><div class="k">provider</div>veo-3.1-fast</div>
+      <div><div class="k">cost</div>$3.20</div>
+      <div><div class="k">status</div><span class="dot" style="background:#4A6B3A"></span>approved</div>
+    </div>
+  </div>
+</body></html>

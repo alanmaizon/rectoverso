@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Color · Paper</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin:0; padding:24px; }
+  .grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; }
+  .sw { border:1px solid var(--fg-rule); padding:12px; aspect-ratio: 1.1/1; display:flex; flex-direction:column; justify-content:space-between; }
+  .chip { height:56px; width:100%; }
+  .name { font-family: var(--f-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--fg-1); }
+  .val { font-family: var(--f-mono); font-size:11px; color:var(--fg-2); }
+</style></head>
+<body>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background:#F4EFE6;border:1px solid var(--fg-rule)"></div><div><div class="name">paper</div><div class="val">#F4EFE6</div></div></div>
+    <div class="sw"><div class="chip" style="background:#EBE4D6"></div><div><div class="name">paper-2</div><div class="val">#EBE4D6</div></div></div>
+    <div class="sw"><div class="chip" style="background:#1C1A17"></div><div><div class="name">ink</div><div class="val">#1C1A17</div></div></div>
+    <div class="sw"><div class="chip" style="background:#403B34"></div><div><div class="name">ink-2</div><div class="val">#403B34</div></div></div>
+    <div class="sw"><div class="chip" style="background:#C3432B"></div><div><div class="name">accent</div><div class="val">#C3432B</div></div></div>
+  </div>
+</body></html>

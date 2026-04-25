@@ -45,8 +45,23 @@ def get_data_uri(path: Path) -> str:
     b64 = base64.b64encode(path.read_bytes()).decode("utf-8")
     return f"data:{mime_type};base64,{b64}"
 
-def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> bytes:
+def _is_auth_or_quota_error(code: int, body: str) -> bool:
+    if code in (401, 403, 429):
+        return True
+    lowered = body.lower()
+    return "exhausted balance" in lowered or "user is locked" in lowered
+
+
+def run_fal(
+    model: str,
+    payload: dict,
+    api_key: str,
+    backup_api_key: str | None = None,
+    max_retries: int = 3,
+) -> bytes:
     url = f"https://queue.fal.run/{model}"
+    active_key = api_key
+    switched_to_backup = False
     
     # Retry loop for submission
     for attempt in range(max_retries):
@@ -54,7 +69,7 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode(),
-                headers={"Authorization": f"Key {api_key}", "Content-Type": "application/json"},
+                headers={"Authorization": f"Key {active_key}", "Content-Type": "application/json"},
                 method="POST",
             )
             with urllib.request.urlopen(req, timeout=30) as r:
@@ -63,6 +78,15 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else ""
             print(f"    HTTP Error submitting to {model} (Attempt {attempt+1}/{max_retries}): {e.code} - {error_body}")
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying submit...")
+                continue
             if attempt == max_retries - 1:
                 raise RuntimeError(f"fal API error after {max_retries} attempts: {e.code} {e.reason} - {error_body}") from e
             time.sleep(5)
@@ -77,10 +101,23 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
     deadline = time.time() + 900
     while time.time() < deadline:
         time.sleep(5)
-        req = urllib.request.Request(submit["status_url"], headers={"Authorization": f"Key {api_key}"})
+        req = urllib.request.Request(submit["status_url"], headers={"Authorization": f"Key {active_key}"})
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 status = json.load(r)
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if e.fp else ""
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying status poll...")
+                continue
+            print(f"    Warning: status poll failed: {e.code} - {error_body}. Retrying...")
+            continue
         except Exception as e:
             print(f"    Warning: status poll failed: {e}. Retrying...")
             continue
@@ -95,13 +132,22 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
     # Retry loop for downloading result
     for attempt in range(max_retries):
         try:
-            req = urllib.request.Request(submit["response_url"], headers={"Authorization": f"Key {api_key}"})
+            req = urllib.request.Request(submit["response_url"], headers={"Authorization": f"Key {active_key}"})
             with urllib.request.urlopen(req, timeout=30) as r:
                 result = json.load(r)
             break
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else ""
             print(f"    HTTP Error downloading result (Attempt {attempt+1}/{max_retries}): {e.code} - {error_body}")
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying result download...")
+                continue
             if attempt == max_retries - 1:
                 raise RuntimeError(f"fal API error downloading result after {max_retries} attempts: {e.code} - {error_body}") from e
             time.sleep(5)
@@ -143,7 +189,7 @@ def extract_last_frame(video_path: Path, output_image_path: Path):
     print(f"    Saved last frame to {output_image_path.name}")
 
 def main():
-    primary, _ = resolve_fal_keys()
+    primary, backup = resolve_fal_keys()
     if not primary:
         print("Error: FAL_KEY environment variable not set.")
         return 1
@@ -156,7 +202,12 @@ def main():
     if not current_image_path.exists():
         print(f"Initialization: Generating initial establishing frame via FLUX...")
         flux_prompt = f"{CHARACTER_DESIGN} {SCENES[0]} {STYLE}"
-        img_bytes = run_fal("fal-ai/flux-pro/v1.1-ultra", {"prompt": flux_prompt, "aspect_ratio": "16:9"}, primary)
+        img_bytes = run_fal(
+            "fal-ai/flux-pro/v1.1-ultra",
+            {"prompt": flux_prompt, "aspect_ratio": "16:9"},
+            primary,
+            backup,
+        )
         current_image_path.write_bytes(img_bytes)
     else:
         print(f"Initialization: Using existing initial frame {current_image_path.name}")
@@ -181,7 +232,12 @@ def main():
                     "image_url": get_data_uri(current_image_path)
                 }
                 try:
-                    vid_bytes = run_fal("fal-ai/minimax/video-01/image-to-video", minimax_payload, primary)
+                    vid_bytes = run_fal(
+                        "fal-ai/minimax/video-01/image-to-video",
+                        minimax_payload,
+                        primary,
+                        backup,
+                    )
                     video_part_path.write_bytes(vid_bytes)
                 except Exception as e:
                     print(f"  -> Fatal error generating scene {scene_num} part {part}: {e}")

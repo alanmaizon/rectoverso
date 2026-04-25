@@ -9,6 +9,7 @@ import base64
 import json
 import mimetypes
 import subprocess
+import argparse
 import sys
 import time
 import urllib.error
@@ -19,12 +20,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.producer._fal import resolve_fal_keys
 
-# Override the JSON's watercolor style with the requested "sketch like" style
-STYLE = "Hand-drawn rough pencil sketch animation, messy lines, expressive charcoal and colored pencil, minimalist background, unfinished sketch aesthetic, flat 2D depth, traditional animation storyboard style."
-
-CHARACTER_DESIGN = "Two characters: a small tortoise with soft green and earthy tones, and a small dragon with warm orange-red tones."
-
-OUT_DIR = Path("artifacts/dragon_tortoise")
+DEFAULT_STYLE = "Hand-drawn rough pencil sketch animation, messy lines, expressive charcoal and colored pencil, minimalist background, unfinished sketch aesthetic, flat 2D depth, traditional animation storyboard style."
+DEFAULT_OUT_DIR = Path("artifacts/dragon_tortoise")
 
 def get_data_uri(path: Path) -> str:
     mime_type, _ = mimetypes.guess_type(path.name)
@@ -32,8 +29,23 @@ def get_data_uri(path: Path) -> str:
     b64 = base64.b64encode(path.read_bytes()).decode("utf-8")
     return f"data:{mime_type};base64,{b64}"
 
-def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> bytes:
+def _is_auth_or_quota_error(code: int, body: str) -> bool:
+    if code in (401, 403, 429):
+        return True
+    lowered = body.lower()
+    return "exhausted balance" in lowered or "user is locked" in lowered
+
+
+def run_fal(
+    model: str,
+    payload: dict,
+    api_key: str,
+    backup_api_key: str | None = None,
+    max_retries: int = 3,
+) -> bytes:
     url = f"https://queue.fal.run/{model}"
+    active_key = api_key
+    switched_to_backup = False
     
     # Retry loop for submission
     for attempt in range(max_retries):
@@ -41,7 +53,7 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode(),
-                headers={"Authorization": f"Key {api_key}", "Content-Type": "application/json"},
+                headers={"Authorization": f"Key {active_key}", "Content-Type": "application/json"},
                 method="POST",
             )
             with urllib.request.urlopen(req, timeout=30) as r:
@@ -50,6 +62,15 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else ""
             print(f"    HTTP Error submitting to {model} (Attempt {attempt+1}/{max_retries}): {e.code} - {error_body}")
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying submit...")
+                continue
             if attempt == max_retries - 1:
                 raise RuntimeError(f"fal API error after {max_retries} attempts: {e.code} {e.reason} - {error_body}") from e
             time.sleep(5)
@@ -64,10 +85,23 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
     deadline = time.time() + 900
     while time.time() < deadline:
         time.sleep(5)
-        req = urllib.request.Request(submit["status_url"], headers={"Authorization": f"Key {api_key}"})
+        req = urllib.request.Request(submit["status_url"], headers={"Authorization": f"Key {active_key}"})
         try:
             with urllib.request.urlopen(req, timeout=10) as r:
                 status = json.load(r)
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if e.fp else ""
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying status poll...")
+                continue
+            print(f"    Warning: status poll failed: {e.code} - {error_body}. Retrying...")
+            continue
         except Exception as e:
             print(f"    Warning: status poll failed: {e}. Retrying...")
             continue
@@ -82,13 +116,22 @@ def run_fal(model: str, payload: dict, api_key: str, max_retries: int = 3) -> by
     # Retry loop for downloading result
     for attempt in range(max_retries):
         try:
-            req = urllib.request.Request(submit["response_url"], headers={"Authorization": f"Key {api_key}"})
+            req = urllib.request.Request(submit["response_url"], headers={"Authorization": f"Key {active_key}"})
             with urllib.request.urlopen(req, timeout=30) as r:
                 result = json.load(r)
             break
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else ""
             print(f"    HTTP Error downloading result (Attempt {attempt+1}/{max_retries}): {e.code} - {error_body}")
+            if (
+                backup_api_key
+                and not switched_to_backup
+                and _is_auth_or_quota_error(e.code, error_body)
+            ):
+                active_key = backup_api_key
+                switched_to_backup = True
+                print("    Switching to backup fal key and retrying result download...")
+                continue
             if attempt == max_retries - 1:
                 raise RuntimeError(f"fal API error downloading result after {max_retries} attempts: {e.code} - {error_body}") from e
             time.sleep(5)
@@ -129,29 +172,98 @@ def extract_last_frame(video_path: Path, output_image_path: Path):
     subprocess.run(cmd_extract, capture_output=True, check=True)
     print(f"    Saved last frame to {output_image_path.name}")
 
+
+def _build_character_design(story: dict) -> str:
+    chars = story.get("characters") or {}
+    if not isinstance(chars, dict) or not chars:
+        return "Two friendly storybook characters in a consistent hand-drawn style."
+    entries: list[str] = []
+    for name, cfg in chars.items():
+        visual = ""
+        if isinstance(cfg, dict):
+            visual = str(cfg.get("visual") or "").strip()
+        label = str(name).replace("_", " ")
+        entries.append(f"{label}: {visual}" if visual else label)
+    return "Characters: " + "; ".join(entries) + "."
+
+
+def _scene_parts(scene: dict) -> list[dict]:
+    raw_parts = scene.get("parts")
+    if isinstance(raw_parts, list) and raw_parts:
+        parts: list[dict] = []
+        for idx, p in enumerate(raw_parts, start=1):
+            if not isinstance(p, dict):
+                continue
+            parts.append(
+                {
+                    "part": int(p.get("part") or idx),
+                    "camera": str(p.get("camera") or ""),
+                    "description": str(p.get("description") or ""),
+                    "animation": str(p.get("animation") or ""),
+                }
+            )
+        if parts:
+            return parts
+
+    return [
+        {
+            "part": 1,
+            "camera": str(scene.get("camera") or ""),
+            "description": str(scene.get("description") or ""),
+            "animation": str(scene.get("animation") or ""),
+        }
+    ]
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Render a storybook JSON via FLUX + Kling.")
+    parser.add_argument(
+        "--story-file",
+        default="storybook-part2.json",
+        help="Path to storybook JSON file (default: storybook-part2.json)",
+    )
+    parser.add_argument(
+        "--out-dir",
+        default=str(DEFAULT_OUT_DIR),
+        help="Output directory for rendered clips",
+    )
+    return parser.parse_args()
+
 def main():
-    primary, _ = resolve_fal_keys()
+    args = _parse_args()
+    primary, backup = resolve_fal_keys()
     if not primary:
         print("Error: FAL_KEY environment variable not set.")
         return 1
-        
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     # Read the storybook configuration
-    with open("storybook-part2.json", "r") as f:
+    with open(args.story_file, "r") as f:
         story = json.load(f)
-        
+
     scenes = story["scenes"]
-    
-    current_image_path = OUT_DIR / "scene_00_initial.png"
+    style = str(story.get("style") or DEFAULT_STYLE)
+    character_design = _build_character_design(story)
+
+    current_image_path = out_dir / "scene_00_initial.png"
     
     # Step 1: Generate initial frame via FLUX if it doesn't exist
     if not current_image_path.exists():
         print(f"Initialization: Generating initial establishing frame via FLUX...")
         first_scene = scenes[0]
-        first_part = first_scene["parts"][0]
-        flux_prompt = f"{CHARACTER_DESIGN} {first_part['camera']}. {first_part['description']} {first_part['animation']}. {STYLE} {first_scene.get('artistic_direction', '')}"
-        img_bytes = run_fal("fal-ai/flux-pro/v1.1-ultra", {"prompt": flux_prompt, "aspect_ratio": "16:9"}, primary)
+        first_part = _scene_parts(first_scene)[0]
+        flux_prompt = (
+            f"{character_design} {first_part['camera']}. {first_part['description']} "
+            f"{first_part['animation']}. {style} {first_scene.get('artistic_direction', '')}"
+        )
+        img_bytes = run_fal(
+            "fal-ai/flux-pro/v1.1-ultra",
+            {"prompt": flux_prompt, "aspect_ratio": "16:9"},
+            primary,
+            backup,
+        )
         current_image_path.write_bytes(img_bytes)
     else:
         print(f"Initialization: Using existing initial frame {current_image_path.name}")
@@ -163,23 +275,28 @@ def main():
         
         print(f"\nScene {scene_num}: {scene.get('narration', '')}")
         
-        for part_data in scene.get("parts", []):
+        for part_data in _scene_parts(scene):
             part = part_data["part"]
             scene_prompt = f"{part_data['camera']}. {part_data['description']} {part_data['animation']}."
-            
-            video_part_path = OUT_DIR / f"scene_{scene_num:02d}_part{part}.mp4"
-            next_part_image_path = OUT_DIR / f"scene_{scene_num:02d}_part{part}_last_frame.png"
+
+            video_part_path = out_dir / f"scene_{scene_num:02d}_part{part}.mp4"
+            next_part_image_path = out_dir / f"scene_{scene_num:02d}_part{part}_last_frame.png"
             
             if not video_part_path.exists():
                 print(f"  -> Animating via Kling 2.1 Pro (Part {part}/3)...")
                 kling_payload = {
-                    "prompt": f"{CHARACTER_DESIGN} {scene_prompt} {STYLE} {artistic_direction}",
+                    "prompt": f"{character_design} {scene_prompt} {style} {artistic_direction}",
                     "image_url": get_data_uri(current_image_path),
                     "duration": "10",
                     "aspect_ratio": "16:9"
                 }
                 try:
-                    vid_bytes = run_fal("fal-ai/kling-video/v2.1/pro/image-to-video", kling_payload, primary)
+                    vid_bytes = run_fal(
+                        "fal-ai/kling-video/v2.1/pro/image-to-video",
+                        kling_payload,
+                        primary,
+                        backup,
+                    )
                     video_part_path.write_bytes(vid_bytes)
                 except Exception as e:
                     print(f"  -> Fatal error generating scene {scene_num} part {part}: {e}")
@@ -195,7 +312,7 @@ def main():
             current_image_path = next_part_image_path
             
     print("\n=== Dragon & Tortoise Pipeline Complete ===")
-    print(f"Check {OUT_DIR} for your continuous animation clips!")
+    print(f"Check {out_dir} for your continuous animation clips!")
     
 if __name__ == "__main__":
     sys.exit(main())

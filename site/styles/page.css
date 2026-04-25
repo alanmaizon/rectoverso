@@ -65,9 +65,18 @@
   aspect-ratio: 16/9;
   background: var(--ink);
   overflow: hidden;
-  cursor: pointer;
 }
+.hero__iframe,
+.hero__video,
 .hero__frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero__video {
+  border: 2px solid var(--fg-2);
+  box-sizing: border-box;
+}
+.hero__iframe {
+  border: 0;
+  background: var(--ink);
+}
 .hero__play {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;

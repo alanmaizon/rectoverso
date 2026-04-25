@@ -192,11 +192,11 @@
     },
     {
       "shot_id": "sh_006",
-      "description": "Kitchen, Ireland (morning) - Soft profile of a child, age ~7, standing in the doorway of their own kitchen in warm morning light.",
+      "description": "Vatnajökull Glacier, Iceland (dusk) - A slow, sweeping panoramic drone shot over a massive blue glacier. Deep crevasses and ancient ice stretching to the horizon.",
       "duration_s": 10.0,
       "continuity_refs": [],
       "prompt": {
-        "primary": "Soft profile of a child, age ~7, standing in the doorway of their own kitchen in warm morning light.",
+        "primary": "A slow, sweeping panoramic drone shot over a massive blue glacier. Deep crevasses and ancient ice stretching to the horizon.",
         "reference_subject_paths": []
       },
       "routing": {
@@ -268,8 +268,8 @@
     "music_path": "artifacts/audio/orchestral_score.wav",
     "dialogue": [
       {
-        "voice_id": "child",
-        "audio_path": "artifacts/audio/vo_002.wav",
+        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "audio_path": "artifacts/audio/sh_002_vo_002_v1.mp3",
         "duration_s": 4.0,
         "timing": {
           "shot_id": "sh_002",
@@ -278,8 +278,8 @@
         "text": "There are places on this planet you will never stand in."
       },
       {
-        "voice_id": "child",
-        "audio_path": "artifacts/audio/vo_003.wav",
+        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "audio_path": "artifacts/audio/sh_003_vo_003_v1.mp3",
         "duration_s": 3.0,
         "timing": {
           "shot_id": "sh_003",
@@ -288,8 +288,8 @@
         "text": "A flood at golden hour."
       },
       {
-        "voice_id": "child",
-        "audio_path": "artifacts/audio/vo_004.wav",
+        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "audio_path": "artifacts/audio/sh_004_vo_004_v1.mp3",
         "duration_s": 3.5,
         "timing": {
           "shot_id": "sh_004",
@@ -298,18 +298,18 @@
         "text": "A canopy you cannot reach except by wing."
       },
       {
-        "voice_id": "child",
-        "audio_path": "artifacts/audio/vo_006.wav",
+        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "audio_path": "artifacts/audio/sh_006_vo_006_v1.mp3",
         "duration_s": 5.0,
         "timing": {
           "shot_id": "sh_006",
           "offset_s": 1.0
         },
-        "text": "And a kitchen, in a quiet morning, where someone you love is making tea."
+        "text": "And a frozen expanse of ancient ice, shifting under its own weight."
       },
       {
-        "voice_id": "child",
-        "audio_path": "artifacts/audio/vo_007.wav",
+        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "audio_path": "artifacts/audio/sh_007_vo_007_v1.mp3",
         "duration_s": 2.0,
         "timing": {
           "shot_id": "sh_007",
