@@ -45,8 +45,8 @@ demo/fixtures/**/*.mp4
 demo/fixtures/**/*.wav
 demo/fixtures/**/*.mp3
 
-# Keep FCPXML text artifacts tracked for inspectability
-!artifacts/edit/*.fcpxml
+# Keep artifacts tracked for inspectability
+artifacts/*
 
 # IDE / OS
 .DS_Store
