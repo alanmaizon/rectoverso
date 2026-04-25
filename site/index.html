@@ -234,16 +234,13 @@ function Script({ shots }) {
     <section className="section" id="script">
       <p className="section__eyebrow">§ 02 — the script</p>
       <h2 className="section__title">Shots, in order.</h2>
-      <p style={{maxWidth:"54ch", color:"var(--fg-2)", marginBottom:"var(--sp-5)"}}>
-        videos are 8seconds each, default contect on this table is mock
-      </p>
       <ol className="script__list">
         {shots.map((s, i) => (
           <li key={s.shot_id} className="script__row">
             <span className="script__num">{String(i + 1).padStart(2, "0")}</span>
             <span className="script__scene">{inferSceneLabel(s, i)}</span>
             <span className="script__desc">{s.description}</span>
-            <span className="script__dur">{s.duration_s.toFixed(1)}s</span>
+            <span className="script__dur">8.0s</span>
           </li>
         ))}
       </ol>
