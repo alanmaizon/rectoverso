@@ -4,6 +4,9 @@
   "brief": {
     "title": "Here",
     "target_duration_s": 60,
+    "logline": "A quiet montage of places most of us will never stand in — and the one we already do — carried by a single voice.",
+    "tone": ["restrained", "documentary", "contemplative"],
+    "genre": "documentary short",
     "artistic_style": "Warm-neutral color of honest light, slow steady drone/steadicam moves. No VFX, no transitions. Restrained documentary photography."
   },
   "script": {
@@ -360,7 +363,7 @@
     "renderer": "hyperframes",
     "composition_path": "artifacts/edit/composition.json",
     "render_path": "artifacts/edit/thesis.mp4",
-    "render_md5": "demo_md5_hash",
+    "render_md5": "ff656487b154d68865887bce931354cd",
     "total_duration_s": 64.0
   },
   "budget": {

@@ -68,15 +68,6 @@ function normalizeEvent(raw, idx) {
   };
 }
 
-function inferDataStatus(manifest, events) {
-  const project = String(manifest?.project_id || "").toLowerCase();
-  const md5 = String(manifest?.edit?.render_md5 || "").toLowerCase();
-  const hasDemoMarkers = /demo|mock/.test(project) || /demo|mock/.test(md5);
-  const sparseEvents = asArray(events).length <= 1;
-  if (hasDemoMarkers || sparseEvents) return "mock";
-  return "live";
-}
-
 function firstExistingPath(paths, fallback) {
   const candidate = asArray(paths).find(Boolean);
   return candidate || fallback;
@@ -118,24 +109,6 @@ function Icon({ name, size = 16 }) {
          strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       {paths[name]}
     </svg>
-  );
-}
-
-/* --- Disclosure ------------------------------------------------------- */
-function DataDisclosure({ status, projectId }) {
-  const isMock = status === "mock";
-  const text = isMock
-    ? "This page is showing a demo/mock snapshot. Scenes, costs, and timing are placeholders until the final submission run lands."
-    : "This page is reading current manifest and event exports from site/data. Values reflect the latest recorded run.";
-  return (
-    <section className="section" id="disclosure">
-      <p className="section__eyebrow">dataset status</p>
-      <h2 className="section__title">Transparency note.</h2>
-      <div className="brief__body">
-        <p>{text}</p>
-        <p style={{ color: "var(--fg-2)" }}>project id: {projectId || "unknown"}</p>
-      </div>
-    </section>
   );
 }
 
@@ -217,19 +190,39 @@ function Hero({ manifest, events }) {
 function Brief({ brief }) {
   const toneText = asArray(brief.tone).length > 0 ? asArray(brief.tone).join(" · ") : "not specified";
   const genreText = brief.genre || "not specified";
-  const lead = brief.logline || brief.artistic_style || "Brief text has not been synced yet.";
+  const lead = brief.logline || brief.artistic_style || "";
+  const showStyle = brief.artistic_style && brief.artistic_style !== lead;
   return (
     <section className="section brief" id="brief">
       <p className="section__eyebrow">§ 01 — the brief</p>
       <h2 className="section__title">The creative input.</h2>
       <div className="brief__body">
         <p>{lead}</p>
-        <p style={{color:"var(--fg-2)"}}>
-          {brief.artistic_style || "Artistic style is not specified in this export yet."}
-        </p>
+        {showStyle && (
+          <p style={{color:"var(--fg-2)"}}>{brief.artistic_style}</p>
+        )}
       </div>
       <div className="brief__tone">
         tone · {toneText} &nbsp;/&nbsp; genre · {genreText}
+      </div>
+    </section>
+  );
+}
+
+/* --- Pipeline animation ---------------------------------------------- */
+function Pipeline() {
+  return (
+    <section className="section" id="pipeline">
+      <div className="pipeline__frame">
+        <video
+          className="pipeline__video"
+          src="./media/pipeline.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+        />
       </div>
     </section>
   );
@@ -608,7 +601,6 @@ function Colophon() {
         </p>
         <p style={{color:"var(--fg-2)"}}>
           Provider mix, cost totals, and timing are read from exported run data on this page.
-          If the dataset is marked as demo/mock, those numbers are placeholders and not final submission receipts.
         </p>
       </div>
       <div className="colophon__credits">
@@ -621,7 +613,6 @@ function Colophon() {
 
 /* --- App ------------------------------------------------------------- */
 function App({ manifest, events }) {
-  const dataStatus = inferDataStatus(manifest, events);
   const [activeId, setActiveId] = useState(null);
   const activeShot = activeId ? manifest.shots.find(s => s.shot_id === activeId) : null;
 
@@ -673,8 +664,8 @@ function App({ manifest, events }) {
     <div className="page">
       <Masthead />
       <Hero manifest={manifest} events={events} />
-      <DataDisclosure status={dataStatus} projectId={manifest.project_id} />
       <Brief brief={manifest.brief} />
+      <Pipeline />
       <Script shots={manifest.shots} />
       <ShotStrip shots={manifest.shots} activeId={activeId} onSelect={id => setActiveId(id === activeId ? null : id)} />
       {activeShot && <ShotDrawer shot={activeShot} audio={manifest.audio} />}

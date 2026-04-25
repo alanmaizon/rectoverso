@@ -86,6 +86,20 @@
 .hero__play svg { width: 56px; height: 56px; stroke: currentColor; fill: currentColor; stroke-width: 1.2; }
 .hero__frame:hover .hero__play { opacity: 0.85; }
 
+.pipeline__frame {
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+}
+.pipeline__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
 .hero__signature {
   margin: 18px 0 0;
   padding-top: 14px;
