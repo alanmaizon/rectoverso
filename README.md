@@ -8,6 +8,10 @@
 
 `rectoverso` takes a creative brief and autonomously produces an assembled short film. It orchestrates shots, voiceovers, sound effects, and deterministically renders a final composition to MP4 using specialized agents coordinated by a primary orchestrator.
 
+<p align="center">
+  <video src="site/media/pipeline.mp4" controls="controls" width="100%"></video>
+</p>
+
 ## Architecture (The Secret Sauce)
 
 `rectoverso` employs a strict **Tiered Agent System** governed by the golden rule: **no agents talk to each other directly.** All coordination is managed by reading and writing to a shared JSON state machine (`state/manifest.json`), the single source of truth.
