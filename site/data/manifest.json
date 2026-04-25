@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0",
-  "project_id": "demo_project_golden",
+  "project_id": "here",
   "brief": {
     "title": "Here",
     "target_duration_s": 60,
@@ -361,7 +361,7 @@
     "composition_path": "artifacts/edit/composition.json",
     "render_path": "artifacts/edit/thesis.mp4",
     "render_md5": "demo_md5_hash",
-    "total_duration_s": 60.0
+    "total_duration_s": 64.0
   },
   "budget": {
     "cap_usd": 150,

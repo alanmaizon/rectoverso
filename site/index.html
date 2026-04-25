@@ -203,9 +203,11 @@ function Hero({ manifest, events }) {
             <span className="hero__signature-note">bit-identical on every render</span>
           </div>
         )}
-        <a href={`./${edit.composition_archive_path || "media/composition.zip"}`} className="hero__dl-download" download>
-          <Icon name="download" /> Download composition
-        </a>
+        {edit.composition_archive_path && (
+          <a href={`./${edit.composition_archive_path}`} className="hero__dl-download" download>
+            <Icon name="download" /> Download composition
+          </a>
+        )}
       </aside>
     </section>
   );
