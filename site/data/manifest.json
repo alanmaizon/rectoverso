@@ -23,7 +23,7 @@
         "chosen_provider": "kling",
         "chosen_model": "kling-2.1",
         "estimated_cost_usd": 0.35,
-        "reasoning": "Human subject — routed to Kling via fal.ai per humans_never_veo rule."
+        "reasoning": "Human subject \u2014 routed to Kling via fal.ai per humans_never_veo rule."
       },
       "attempts": [
         {
@@ -71,7 +71,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.91,
-          "judge_notes": "Stillness reads as intent, not absence. Dust-mote particulate is plausible at f/2.8-equivalent depth; floorboard tonal range holds without crushed shadows. Camera doesn't drift — the held frame earns the open."
+          "judge_notes": "Stillness reads as intent, not absence. Dust-mote particulate is plausible at f/2.8-equivalent depth; floorboard tonal range holds without crushed shadows. Camera doesn't drift \u2014 the held frame earns the open."
         }
       ],
       "final": {
@@ -107,7 +107,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.84,
-          "judge_notes": "Caustics break across the substrate without strobing — Wan handles rolling sun shafts cleanly. Coral parallax convincing on the foreground sweep. Minor gripe: a school of fish near 0:04 reads slightly synthetic at the tail; not flagging for revision because midground attention dominates."
+          "judge_notes": "Caustics break across the substrate without strobing \u2014 Wan handles rolling sun shafts cleanly. Coral parallax convincing on the foreground sweep. Minor gripe: a school of fish near 0:04 reads slightly synthetic at the tail; not flagging for revision because midground attention dominates."
         }
       ],
       "final": {
@@ -143,7 +143,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.89,
-          "judge_notes": "Golden-hour rake is honest — no orange-teal grade pushed in post. Elephants register weight in the wading splash; the lead bull's gait is anatomically right at this aerial scale. Drift speed maps to a real heli pass, not a drone with too much yaw freedom."
+          "judge_notes": "Golden-hour rake is honest \u2014 no orange-teal grade pushed in post. Elephants register weight in the wading splash; the lead bull's gait is anatomically right at this aerial scale. Drift speed maps to a real heli pass, not a drone with too much yaw freedom."
         }
       ],
       "final": {
@@ -179,7 +179,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.93,
-          "judge_notes": "Wingtip-height parallax is the test and Veo passes it — emergent canopy layer separates cleanly from the understory at speed. Mist sits right; doesn't hover artificially. This is the shot that justifies the Veo spend on the budget — couldn't have hit it on Wan."
+          "judge_notes": "Wingtip-height parallax is the test and Veo passes it \u2014 emergent canopy layer separates cleanly from the understory at speed. Mist sits right; doesn't hover artificially. This is the shot that justifies the Veo spend on the budget \u2014 couldn't have hit it on Wan."
         }
       ],
       "final": {
@@ -215,7 +215,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.85,
-          "judge_notes": "Frozen-night palette holds — the blue cast doesn't blow out into Christmas-card teal. Snowfall density is sparse on purpose and the model respected that. Approved despite a soft edge on the upper-left tree mass; the held wide forgives it. Retry would have cost free quota for negligible gain."
+          "judge_notes": "Frozen-night palette holds \u2014 the blue cast doesn't blow out into Christmas-card teal. Snowfall density is sparse on purpose and the model respected that. Approved despite a soft edge on the upper-left tree mass; the held wide forgives it. Retry would have cost free quota for negligible gain."
         }
       ],
       "final": {
@@ -228,7 +228,7 @@
     },
     {
       "shot_id": "sh_006",
-      "description": "Vatnajökull Glacier, Iceland (dusk) - A slow, sweeping panoramic drone shot over a massive blue glacier. Deep crevasses and ancient ice stretching to the horizon.",
+      "description": "Vatnaj\u00f6kull Glacier, Iceland (dusk) - A slow, sweeping panoramic drone shot over a massive blue glacier. Deep crevasses and ancient ice stretching to the horizon.",
       "duration_s": 10.0,
       "continuity_refs": [],
       "prompt": {
@@ -251,7 +251,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.87,
-          "judge_notes": "Glacier-blue penetrates the ice convincingly — subsurface scatter, not painted-on cyan. Sweeping pan is steady; horizon line doesn't wobble where Kling sometimes drifts. Dusk falloff against the ice is the soft sell, and it works."
+          "judge_notes": "Glacier-blue penetrates the ice convincingly \u2014 subsurface scatter, not painted-on cyan. Sweeping pan is steady; horizon line doesn't wobble where Kling sometimes drifts. Dusk falloff against the ice is the soft sell, and it works."
         }
       ],
       "final": {
@@ -287,7 +287,7 @@
           "latency_s": 45.0,
           "outcome": "approved",
           "judge_score": 0.9,
-          "judge_notes": "Closing exterior carries the rhyme back to sh_001 without copying it — same tonal register, different framing. The film breathes out here. No motion at all and that's the right call; a slow push-in would have undercut the brief."
+          "judge_notes": "Closing exterior carries the rhyme back to sh_001 without copying it \u2014 same tonal register, different framing. The film breathes out here. No motion at all and that's the right call; a slow push-in would have undercut the brief."
         }
       ],
       "final": {
@@ -304,7 +304,7 @@
     "music_path": "artifacts/audio/orchestral_score.mp3",
     "dialogue": [
       {
-        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "voice_id": "kOvUpYLYS0rKGldsKcD1",
         "audio_path": "artifacts/audio/sh_002_vo_002_v1.mp3",
         "duration_s": 4.0,
         "timing": {
@@ -314,7 +314,7 @@
         "text": "There are places on this planet you will never stand in."
       },
       {
-        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "voice_id": "kOvUpYLYS0rKGldsKcD1",
         "audio_path": "artifacts/audio/sh_003_vo_003_v1.mp3",
         "duration_s": 3.0,
         "timing": {
@@ -324,7 +324,7 @@
         "text": "A flood at golden hour."
       },
       {
-        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "voice_id": "kOvUpYLYS0rKGldsKcD1",
         "audio_path": "artifacts/audio/sh_004_vo_004_v1.mp3",
         "duration_s": 3.5,
         "timing": {
@@ -334,7 +334,7 @@
         "text": "A canopy you cannot reach except by wing."
       },
       {
-        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "voice_id": "kOvUpYLYS0rKGldsKcD1",
         "audio_path": "artifacts/audio/sh_006_vo_006_v1.mp3",
         "duration_s": 5.0,
         "timing": {
@@ -344,7 +344,7 @@
         "text": "And a frozen expanse of ancient ice, shifting under its own weight."
       },
       {
-        "voice_id": "jBpfuIE2acCO8z3wKNLl",
+        "voice_id": "kOvUpYLYS0rKGldsKcD1",
         "audio_path": "artifacts/audio/sh_007_vo_007_v1.mp3",
         "duration_s": 2.0,
         "timing": {
