@@ -590,22 +590,34 @@ function Ledger({ events, budget, shots }) {
 function Colophon() {
   return (
     <section className="section colophon" id="colophon">
-      <p className="section__eyebrow">§ 06 — colophon</p>
-      <h2 className="section__title">How it was made.</h2>
-      <div className="colophon__body">
-        <p>
-          This film was produced by <em>rectoverso</em>, a multi-agent pipeline orchestrated by
-          Anthropic&apos;s Claude Opus 4.7. A Producer agent coordinated specialists — a Screenwriter,
-          a Prompt Smith, a Router, a Renderer, a Shot Judge, an Audio Agent, an Editor Agent, and a
-          Creative Director — through a shared shot manifest. A human wrote the brief and reviewed outputs.
-        </p>
-        <p style={{color:"var(--fg-2)"}}>
-          Provider mix, cost totals, and timing are read from exported run data on this page.
-        </p>
-      </div>
-      <div className="colophon__credits">
-        brief · dellamaison &nbsp;·&nbsp; pipeline · rectoverso &nbsp;·&nbsp; models · claude-opus-4.7 ·
-        kling-2.1 · wan-2.7 · veo-3.1 · elevenlabs
+      <div className="colophon__grid">
+        <div>
+          <p className="section__eyebrow">§ 06 — colophon</p>
+          <h2 className="section__title">How it was made.</h2>
+          <div className="colophon__body">
+            <p>
+              This film was produced by <em>rectoverso</em>, a multi-agent pipeline orchestrated by
+              Anthropic&apos;s Claude Opus 4.7. A Producer agent coordinated specialists — a Screenwriter,
+              a Prompt Smith, a Router, a Renderer, a Shot Judge, an Audio Agent, an Editor Agent, and a
+              Creative Director — through a shared shot manifest. A human wrote the brief and reviewed outputs.
+            </p>
+            <p style={{color:"var(--fg-2)"}}>
+              Provider mix, cost totals, and timing are read from exported run data on this page.
+            </p>
+          </div>
+          <div className="colophon__credits">
+            brief · dellamaison &nbsp;·&nbsp; pipeline · rectoverso &nbsp;·&nbsp; models · claude-opus-4.7 ·
+            kling-2.1 · wan-2.7 · veo-3.1 · elevenlabs
+          </div>
+        </div>
+        <div>
+          <video 
+            src="media/how-it-works.mp4" 
+            controls 
+            playsInline
+            className="colophon__video"
+          />
+        </div>
       </div>
     </section>
   );
