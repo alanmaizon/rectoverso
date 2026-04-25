@@ -234,6 +234,9 @@ function Script({ shots }) {
     <section className="section" id="script">
       <p className="section__eyebrow">§ 02 — the script</p>
       <h2 className="section__title">Shots, in order.</h2>
+      <p style={{maxWidth:"54ch", color:"var(--fg-2)", marginBottom:"var(--sp-5)"}}>
+        videos are 8seconds each, default contect on this table is mock
+      </p>
       <ol className="script__list">
         {shots.map((s, i) => (
           <li key={s.shot_id} className="script__row">
