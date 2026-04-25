@@ -343,7 +343,6 @@ Day-2 research (`artistic_pipeline.md`) reframed the pipeline from deterministic
 Still open: implementing the actual Producer runtime; the `invoke_creative_director` tool adapter; Screenwriter's hook for flagging `is_hero`.
 
 ### 2026-04-22T17:30:00Z — Vertex + Veo preflight green; architecture doc landed
-Fresh GCP project (`project-87d15b7f-7332-458c-a73`) authenticated under `anna.phalan@gmail.com`.
 
 Auth path: **ADC, no service-account keys** — org policy `iam.managed.disableServiceAccountKeyCreation` blocks SA key creation on this project; the user can't override (not Org Policy Admin on a fresh org). Moot: ADC is the recommended pattern anyway. `.env.example` updated with the full `gcloud` one-time setup sequence.
 
