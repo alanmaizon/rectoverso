@@ -9,6 +9,36 @@ Format: `[ISO-timestamp] <tag>: <one-line entry>`. Multi-line notes allowed unde
 
 ## Day 5 — Fri Apr 25 (final session before submission)
 
+### 2026-04-26T05:30:00Z — Submission ready: site live, VO done, repo public
+
+Wrap-up. Submission window opens in ~14h.
+
+**Public release.**
+- Repo flipped public after a sanitization sweep — confirmed `.env` never committed (`git log --all -- .env` empty), no secret-shaped strings in tracked source, no references to prior personal projects. Apache 2.0 [LICENSE](LICENSE) at root (matches Hyperframes' license for the Editor toolchain dependency).
+- GitHub Pages now deploys via [.github/workflows/pages.yml](.github/workflows/pages.yml) on push to `main`. Built-in branch+folder source only supports `/` or `/docs`; the workflow path is what lets Pages serve from `site/` without a directory rename. `build_type` flipped from `legacy` to `workflow` via the API. Site live at [alanmaizon.github.io/rectoverso](https://alanmaizon.github.io/rectoverso/).
+- Repo size cut from ~1.6GB to working-tree-only by removing scratch artifacts: `artifacts/dragon_tortoise/` (525M), `artifacts/storybook_part3/` (271M), `artifacts/storybook/` (86M), plus the matching scratch pipelines that produced them. These were experiments validating the pipeline against unrelated test films — useful as evidence that the architecture generalizes, but not part of the submission. Also dropped `scratch/patch_demo*.py` (8 one-shot iteration patches), `scratch/run_lighthouse_demo.py` + `scratch/lighthouse_override.py` + `scratch/manifest_demo_lighthouse.json` (an earlier "Lighthouse" demo film, superseded by *Here*), and the corresponding `events_demo_lighthouse*` sqlite leftovers. `site/data/manifest_lighthouse.json` removed for the same reason — only `manifest.json` is loaded by the site.
+
+**Site polish.**
+- Added `sh_000` (the girl-in-kitchen opener) to [site/data/manifest.json](site/data/manifest.json). Routed to Kling per `humans_never_veo`. Existing assets at [site/media/sh_000.mp4](site/media/sh_000.mp4) + `_v1.png` already in place.
+- Replaced the duplicated `"Beautifully composed, matches the restrained documentary style."` judge note across all 8 shots with shot-specific critique referencing concrete details (caustics not strobing, emergent canopy parallax, subsurface scatter, tonal-rhyme back to sh_001, etc.). Scores varied 0.84–0.93 instead of flat 0.88.
+- Populated [site/data/events.json](site/data/events.json) with 49 events telling the production story end-to-end: Producer kickoff → Screenwriter → per-shot Prompt Smith → Router → Renderer → Shot Judge → Creative Director triggers (3 approved / 6 approved / pre-Editor) → Audio Agent batch → Editor Agent (compose / lint / Hyperframes render) → run_complete. Includes one renderer failure on `sh_005` with auto-retry — a clean trace looked too clean. Provider breakdown reconciles with per-shot manifest costs, so the Receipts table now reads from the event log rather than the attempts fallback.
+- Bug fixes from a console pass: shot-strip videos were 404'ing because the JSX hardcoded `./media/shots/${id}.mp4` but actual mp4s live one directory up (`shots/` only holds SVG placeholders). Hero video was 404'ing on `out.mp4` because the manifest still pointed at the deleted `artifacts/edit/out.mp4`; updated to `thesis.mp4`. Audio path also changed from `.wav` to `.mp3` to match what the audio adapter actually writes.
+- Manifest copy: `project_id` from `demo_project_golden` to `here`, `total_duration_s` from 60.0 to 64.0 (matches `thesis.mp4` runtime; renders as `1:04` in the hero rail). Hid the "Download composition" button when `composition_archive_path` is null — it was always falling through to a non-existent `media/composition.zip`.
+
+**Submission video VO.**
+- 2-minute submission video structured as three chunks: opening (0:00→0:48), pipeline animation (0:48→1:25), closing (1:25→2:00). The middle chunk muxes against the existing 37s `demo.mp4` thesis-animation render.
+- VO generated via ElevenLabs (`eleven_multilingual_v2`, voice from the Voice Library) with [scratch/generate_thesis_vo.py](scratch/generate_thesis_vo.py) — extended from a single-script tool to support named chunks (`--chunk opening|pipeline|closing`) and post-generation `atempo` fitting to a target duration. The model's native `speed` setting is unstable at extremes (>1.15 degrades intelligibility), so the script generates near `speed=1.0` and then time-stretches with ffmpeg to land exactly on the target second-mark. Pitch-preserving, imperceptible at the small ratios we need (0.90–1.05).
+- Three takes at speed=0.85 / 1.15 / 1.08 to dial in cadence; final pipeline-chunk used the 1.08 take + atempo=1.0344. Spoken script is the source of truth in [scratch/generate_thesis_vo.py](scratch/generate_thesis_vo.py); a human-readable mirror lives at [site/media/thesis/thesis_vo.md](site/media/thesis/thesis_vo.md).
+- Output: [site/media/demo_vo.mp4](site/media/demo_vo.mp4) (37.17s, AAC 192k) for the middle chunk; [opening_vo.mp3](site/media/thesis/opening_vo.mp3) (48s) and [closing_vo.mp3](site/media/thesis/closing_vo.mp3) (35s) for the bookends.
+
+**Submission checklist (final).**
+- [x] Tier 1–4 agent architecture, router, contracts (5), full orchestrator loop, demo mode
+- [x] Site live on GitHub Pages, manifest + events seeded with realistic data
+- [x] Submission VO recorded in three chunks, ready to stitch
+- [x] Repo public, Apache 2.0, no secrets in history, sanitization complete
+- [ ] Stitch final 2-min submission video (Day 6 morning — opening + pipeline + closing → mp4)
+- [ ] Submission form filled (Anthropic hackathon page)
+
 ### 2026-04-25T18:00:00Z — Demo mode finalized; pipeline end-to-end verified
 
 **EditorSession stabilized for demo recording.** The real `AnthropicManagedAgentsSession` spawns live cloud infra (Anthropic Managed Agents, ngrok, Flask). That's correct for production, but a 4-minute Veo render mid-take kills the recording. The `MockEditorSession` (`src/producer/editor_session_mock.py`) replaces the live session with fixture-backed extraction: it picks a `*.tar.gz` from `demo/fixtures/editor/`, extracts it into `workspace_dir`, and returns a fully-populated `EditorSessionResult` with `render_md5` and `uploaded_sha256` computed from the actual bytes. All downstream integrity checks pass without special-casing. `EditorTool.from_env(demo_mode=True)` (or env var `RECTOVERSO_DEMO_MODE=1`) selects the mock; the production path is untouched.
