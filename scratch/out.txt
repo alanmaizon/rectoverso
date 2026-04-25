@@ -1,4 +1,0 @@
-=== Starting rectoverso DEMO_MODE=1 (Lighthouse Override) ===
-Orchestrator identified starting shot: sh_005 in status: rejected
-
-Running Production Orchestrator Loop...
