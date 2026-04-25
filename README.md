@@ -8,9 +8,65 @@
 
 `rectoverso` takes a creative brief and autonomously produces an assembled short film. It orchestrates shots, voiceovers, sound effects, and deterministically renders a final composition to MP4 using specialized agents coordinated by a primary orchestrator.
 
-<p align="center">
-  <video src="site/media/pipeline.mp4" controls="controls" width="100%"></video>
-</p>
+```mermaid
+flowchart TB
+    Brief[Creative brief<br/>inputs/brief.md]
+
+    subgraph T1 [Tier 1 — Orchestrator]
+      Producer([Producer<br/>Managed Agent])
+    end
+
+    subgraph T3 [Tier 3 — Stateless LLM]
+      Screenwriter([Screenwriter])
+      PromptSmith([PromptSmith])
+    end
+
+    subgraph T2 [Tier 2 — Specialists]
+      ShotJudge([Shot Judge])
+      AudioAgent([Audio Agent])
+      EditorAgent([Editor Agent])
+      CreativeDirector([Creative Director])
+    end
+
+    subgraph T4 [Tier 4 — Deterministic workers]
+      Router{{Router}}
+      Renderer[Renderer]
+      FFmpeg[ffmpeg glue]
+    end
+
+    Manifest[(state/manifest.json)]
+    Events[(state/events.db)]
+
+    Brief --> Producer
+    Producer <-->|reads & writes| Manifest
+    Producer --> Screenwriter
+    Producer --> PromptSmith
+    Producer --> ShotJudge
+    Producer --> AudioAgent
+    Producer --> EditorAgent
+    Producer --> CreativeDirector
+    Producer --> Router
+    Router --> Renderer
+
+    Screenwriter -.-> Manifest
+    PromptSmith -.-> Manifest
+    ShotJudge -.-> Manifest
+    AudioAgent -.-> Manifest
+    EditorAgent -.-> Manifest
+    CreativeDirector -.-> Manifest
+    Renderer -.-> Manifest
+
+    Renderer --> Kling[Kling 2.x<br/>fal.ai]
+    Renderer --> Wan[Wan 2.7<br/>Alibaba]
+    Renderer --> Veo[Veo 3.1 Fast<br/>Vertex AI]
+    AudioAgent --> EL[ElevenLabs]
+
+    EditorAgent --> Hyperframes[[Hyperframes<br/>lint + render CLI]]
+    Hyperframes --> Artifacts[[artifacts/edit/<br/>index.html + out.mp4]]
+
+    Producer -.-> Events
+    Renderer -.-> Events
+```
 
 ## Architecture (The Secret Sauce)
 
