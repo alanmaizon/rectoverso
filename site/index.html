@@ -324,7 +324,7 @@ function ShotStrip({ shots, activeId, onSelect }) {
             </div>
             <div className="strip__meta">
               <span>{s.shot_id}</span>
-              <span>{s.duration_s.toFixed(1)}s</span>
+              <span>8.0s</span>
             </div>
             <div className="strip__title">{s.description}</div>
           </button>
@@ -344,7 +344,7 @@ function ShotDrawer({ shot, audio }) {
     <div className="section" style={{paddingTop:0}}>
       <div className="drawer" key={shot.shot_id}>
         <div>
-          <p className="drawer__eyebrow">shot {shot.shot_id.replace("sh_","")} · {typeof shot.scene === "number" ? `scene ${shot.scene} · ` : ""}{shot.duration_s.toFixed(1)}s</p>
+          <p className="drawer__eyebrow">shot {shot.shot_id.replace("sh_","")} · {typeof shot.scene === "number" ? `scene ${shot.scene} · ` : ""}8.0s</p>
           <h3 className="drawer__title">{shot.description}</h3>
           <blockquote className="drawer__prompt">"{shot?.prompt?.primary || "Prompt not recorded."}"</blockquote>
           {shot.artistic_direction && (
