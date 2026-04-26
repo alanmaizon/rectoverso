@@ -2,6 +2,11 @@
   <img src="site/assets/wordmark.svg" alt="Recto Verso Productions" width="420">
 </p>
 
+<p align="center">
+  <img src="screenshots/Screenshot%202026-04-26%20at%2022.07.45.png" alt="rectoverso screenshot" width="48%">
+  <img src="screenshots/Screenshot%202026-04-26%20at%2022.08.04.png" alt="rectoverso screenshot" width="48%">
+</p>
+
 # rectoverso
 
 **A multi-agent AI filmmaking pipeline built for the "Built with Opus 4.7" Hackathon.**
